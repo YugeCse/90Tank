@@ -1,0 +1,34 @@
+[gd_scene load_steps=3 format=3 uid="uid://cafubc1tshdri"]
+
+[ext_resource type="Script" uid="uid://bn7w312c6nk8n" path="res://scenes/launcher_scene.gd" id="1_nw4v4"]
+[ext_resource type="Texture2D" uid="uid://1urop0vj4yg4" path="res://assets/images/menu.png" id="1_ue4pt"]
+
+[node name="IndexScene" type="Node2D"]
+script = ExtResource("1_nw4v4")
+
+[node name="MenuClipContainer" type="Control" parent="."]
+clip_children = 1
+clip_contents = true
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 470.0
+offset_top = 174.0
+offset_right = 982.0
+offset_bottom = 622.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="Menu" type="Sprite2D" parent="MenuClipContainer"]
+show_behind_parent = true
+position = Vector2(0, 448)
+texture = ExtResource("1_ue4pt")
+centered = false
+
+[connection signal="draw" from="." to="." method="_on_draw"]
+[connection signal="ready" from="." to="." method="_on_ready"]

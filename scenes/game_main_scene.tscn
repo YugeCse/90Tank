@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3 uid="uid://831xnm84ycoi"]
+
+[ext_resource type="Script" uid="uid://ddbr8j0fm3lhu" path="res://scenes/game_main_scene.gd" id="1_cqh8l"]
+
+[node name="GameMainScene" type="Node2D"]
+script = ExtResource("1_cqh8l")
+
+[node name="WarRootMap" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TankLayer" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 542.0
+offset_top = 162.0
+offset_right = 958.0
+offset_bottom = 578.0
+
+[node name="GrassMap" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0

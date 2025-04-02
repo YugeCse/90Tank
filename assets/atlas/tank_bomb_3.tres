@@ -1,0 +1,7 @@
+[gd_resource type="AtlasTexture" load_steps=2 format=3 uid="uid://bwysro2bxbcx8"]
+
+[ext_resource type="Texture2D" uid="uid://b1aea6ndvkf4b" path="res://assets/images/tank_bomb.png" id="1_63qp0"]
+
+[resource]
+atlas = ExtResource("1_63qp0")
+region = Rect2(201, 0, 67, 67)

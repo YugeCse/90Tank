@@ -1,0 +1,8 @@
+[gd_resource type="AtlasTexture" load_steps=2 format=3 uid="uid://e4r5ntj63jj8"]
+
+[ext_resource type="Texture2D" uid="uid://b1aea6ndvkf4b" path="res://assets/images/tank_bomb.png" id="1_jw1x2"]
+
+[resource]
+atlas = ExtResource("1_jw1x2")
+region = Rect2(134, 0, 67, 67)
+filter_clip = true
