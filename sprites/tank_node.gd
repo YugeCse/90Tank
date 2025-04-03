@@ -1,3 +1,4 @@
+## 坦克精灵
 class_name TankNode
 extends CharacterBody2D
 
@@ -10,12 +11,16 @@ var boundary_min: Vector2 = Vector2.ZERO
 var boundary_max: Vector2 = Vector2(100, 100)
 
 ## 坦克类型
-@export 
-var role: TankRoleType.VALUES = TankRoleType.VALUES.Hero
+@export
+var role: int = TankRoleType.Hero
 
 ## 坦克速度
-@export 
+@export
 var speed: float = 160
+
+## 坦克抗击数
+@export
+var hits_of_received: int = 1
 
 ## 方向合集
 var directions := {
@@ -45,12 +50,13 @@ var _tank_bullet_prefab = preload("res://sprites/bullet_node.scn")
 ## 准备方法
 func _ready() -> void:
 	_initialize() #初始化
-	if role != TankRoleType.VALUES.Hero:
+	if role != TankRoleType.Hero:
 		_add_auto_move_timer()
-		self.collision_layer = Constants.CollisionLayer.EnemyTank
+		self.collision_layer = CollisionLayer.EnemyTank
 	else:
-		self.collision_layer = Constants.CollisionLayer.HeroTank
-	
+		self.collision_layer = CollisionLayer.HeroTank
+	self._show_born_effect() #显示出生特效
+
 ## 初始化
 func _initialize():
 	var tank_sprite_sheet = TankRoleType\
@@ -61,7 +67,7 @@ func _initialize():
 
 ## 处理每帧的事件
 func _process(delta: float) -> void:
-	if role == TankRoleType.VALUES.Hero:
+	if role == TankRoleType.Hero:
 		handle_input(delta)
 	else:
 		self._safe_move(delta, current_direction)
@@ -88,7 +94,7 @@ func handle_input(delta: float):
 			return
 		_shoot_time = 0.0
 		self.shoot() #发射子弹
-			
+
 ## 设置坦克方向
 func change_direction(dir_key: String):
 	$TankSprite.texture = _tank_sprite_frames[dir_key]
@@ -96,7 +102,7 @@ func change_direction(dir_key: String):
 	# 立即检测新方向是否可行
 	if has_collision_in_direction(current_direction):
 		velocity = Vector2.ZERO
-	
+
 # 碰撞预检测
 func has_collision_in_direction(dir: Vector2) -> bool:
 	var params = PhysicsTestMotionParameters2D.new()
@@ -105,7 +111,6 @@ func has_collision_in_direction(dir: Vector2) -> bool:
 		.get_rect().size.x / 2 + 2)
 	return PhysicsServer2D.body_test_motion(get_rid(), params)
 
-		
 # 防卡墙增强逻辑
 func _safe_move(delta: float, direction: Vector2):
 	var target_velocity = direction * speed
@@ -115,7 +120,7 @@ func _safe_move(delta: float, direction: Vector2):
 
 ## 退出树节点事件
 func _exit_tree() -> void:
-	if role != TankRoleType.VALUES.Hero:
+	if role != TankRoleType.Hero:
 		_remove_auto_move_timer()
 
 ## 添加自动移动的定时器
@@ -125,7 +130,7 @@ func _add_auto_move_timer():
 	_move_timer.one_shot = false
 	_move_timer.start()
 	_move_timer.timeout.connect(_change_direction_by_timer)
-	
+
 ## 删除自动移动的定时器
 func _remove_auto_move_timer():
 	if _move_timer != null:
@@ -149,6 +154,25 @@ func shoot():
 	bullet.position = position + \
 		bullet.current_direction * Constants.WarMapTiledSize
 	get_parent().add_child(bullet)
+
+## 显示出生特效
+func _show_born_effect():
+	$TankSprite.visible = false
+	$AnimatedSprite2D.visible = true
+	$AnimatedSprite2D.play("Born")
+	$AnimatedSprite2D.animation_finished\
+		.connect(func(): \
+			$AnimatedSprite2D.visible = false; \
+			$TankSprite.visible = true)
+
+## 显示爆炸特效
+func _show_bomb_effect():
+	$TankCollisionShape\
+		.set_deferred(&"disabled", true)
+	$AnimatedSprite2D.visible = true
+	$AnimatedSprite2D.play("Bomb")
+	$AnimatedSprite2D.animation_finished\
+		.connect(func(): free())
 
 ## 获取精灵帧
 func _get_sprite_frames(sprite_sheet: Resource):

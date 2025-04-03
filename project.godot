@@ -10,7 +10,9 @@ config_version=5
 
 [application]
 
-config/name="Tank90"
+config/name="90坦克大战"
+config/description="回忆90后经典坦克大战游戏"
+config/version="1.0.0"
 run/main_scene="uid://cafubc1tshdri"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 boot_splash/bg_color=Color(0, 0, 0, 1)

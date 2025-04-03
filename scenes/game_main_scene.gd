@@ -14,10 +14,6 @@ var stage_level: int = 4
 @onready
 var _tiled_prefab = preload("res://sprites/map_tiled_node.scn")
 
-## 坦克预制体
-@onready
-var _tank_prefab = preload("res://sprites/tank_node.scn")
-
 func _ready() -> void:
 	## 计算界面要绘制的矩形大小，确定战场边界等内容
 	_viewport_rect = get_viewport() \
@@ -38,25 +34,17 @@ func _ready() -> void:
 	## 修改坦克图层位置
 	$TankLayer.position = Vector2(war_offset_x, war_offset_y)
 	$TankLayer.set_size(_war_map_rect.size, false)
-	
+
 	## 设置坦克的可运动的边界
 	var boundary_min = Vector2.ZERO
 	var boundary_max = Vector2(Constants.WarMapSize, Constants.WarMapSize)
-	
-	var hero_tank: TankNode = _tank_prefab.instantiate()
-	hero_tank.role = TankRoleType.VALUES.Hero
-	hero_tank.boundary_min = boundary_min
-	hero_tank.boundary_max = boundary_max
-	hero_tank.position = Vector2(Constants.WarMapTiledBigSize * 4.5, \
-		Constants.WarMapSize - Constants.WarMapTiledBigSize/2.0)
+
+	var hero_tank = TankCreator.create_hero_tank()
 	$TankLayer.add_child(hero_tank);
 
-	var hero_tank2: TankNode = _tank_prefab.instantiate()
-	hero_tank2.role = TankRoleType.VALUES.Enemy2
-	hero_tank2.boundary_min = boundary_min
-	hero_tank2.boundary_max = boundary_max
-	$TankLayer.add_child(hero_tank2);
-	
+	var enemy_tank = TankCreator.create_enemy_tank(TankRoleType.Enemy2, TankCreator.CREATE_LCOATION_CENTER)
+	$TankLayer.add_child(enemy_tank);
+
 func _draw() -> void:
 	draw_rect(_viewport_rect, Color.GRAY)
 	draw_rect(_war_map_rect, Color.BLACK)
@@ -75,7 +63,7 @@ func _draw_stage_map():
 			tiled.position = Vector2( \
 				pos_x + Constants.WarMapTiledSize/2.0, \
 				pos_y + Constants.WarMapTiledSize/2.0)
-			if tiled_type != MapTiledType.VALUES.GRASS:
+			if tiled_type != MapTiledType.GRASS:
 				$WarRootMap.add_child(tiled)
 			else:
 				$GrassMap.add_child(tiled)

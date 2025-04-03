@@ -24,7 +24,7 @@ enum Direction {
 }
 
 ## 通过方向获取Vector2
-static func get_vec2_by_direction(dir: Direction)->Vector2:
+static func get_vec2_by_direction(dir: Direction) -> Vector2:
 	if dir == Direction.UP:
 		return Vector2.UP
 	elif dir == Direction.DOWN:
@@ -36,7 +36,7 @@ static func get_vec2_by_direction(dir: Direction)->Vector2:
 	return Vector2.ZERO
 
 ## 通过Vector2获取方向
-static func get_direction_by_vec2(dir: Vector2)->Direction:
+static func get_direction_by_vec2(dir: Vector2) -> Direction:
 	if dir == Vector2.UP:
 		return Direction.UP
 	elif dir == Vector2.DOWN:
@@ -46,23 +46,3 @@ static func get_direction_by_vec2(dir: Vector2)->Direction:
 	elif dir == Vector2.RIGHT:
 		return Direction.RIGHT
 	return Direction.ZERO
-
-## 碰撞层
-enum CollisionLayer {
-	Default = 0,
-	HeroTank = 1,
-	EnemyTank = 2,
-	Wall = 3,
-	Grid = 4,
-	Grass = 5,
-	River = 6,
-	Ice = 7,
-	Prop = 8,
-	Master = 9,
-	Boundary = 10
-}
-
-## 碰撞掩码层
-enum CollisionMaskLayer {
-	
-}
