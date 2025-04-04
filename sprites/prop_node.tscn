@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3 uid="uid://u6k4c0qdew8b"]
+
+[ext_resource type="Texture2D" uid="uid://c8hd32tin8pu6" path="res://assets/images/prop_hat.png" id="1_s72by"]
+[ext_resource type="Script" uid="uid://b8q1lb235uwg" path="res://sprites/prop_node.gd" id="2_id35a"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_4pvxq"]
+size = Vector2(30, 28)
+
+[node name="Prop" type="Sprite2D"]
+texture = ExtResource("1_s72by")
+script = ExtResource("2_id35a")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="."]
+collision_layer = 256
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
+shape = SubResource("RectangleShape2D_4pvxq")

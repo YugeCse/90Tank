@@ -1,0 +1,9 @@
+extends Node
+## 总部被摧毁
+signal master_damaged()
+## 玩家被击毙
+signal player_damaged()
+## 敌人被击毙
+signal enemy_damaged(TankNode)
+## 玩家获得道具
+signal player_get_prop(PropNode)

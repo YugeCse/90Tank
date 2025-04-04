@@ -7,7 +7,7 @@ func _ready() -> void:
 	_adjust_nodes_location()
 	_show_menu_animation()
 	_load_game_main_scene()
-	
+
 func _draw() -> void:
 	draw_rect(get_viewport()\
 		.get_visible_rect(), Color.BLACK)
@@ -17,7 +17,6 @@ func _adjust_nodes_location():
 	var game_size = get_viewport().get_visible_rect().size
 	var menu_size = $MenuClipContainer.size
 	$MenuClipContainer.position = (game_size - menu_size) / 2.0
-	print("游戏界面大小:",game_size, " 菜单大小：", menu_size, " 视窗大小: ", get_viewport())
 
 ## 显示菜单的动画
 func _show_menu_animation():
@@ -30,4 +29,3 @@ func _show_menu_animation():
 func _load_game_main_scene():
 	await get_tree().create_timer(3).timeout
 	get_tree().change_scene_to_file("res://scenes/game_main_scene.tscn")
-	

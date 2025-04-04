@@ -10,12 +10,32 @@ var _war_map_rect: Rect2
 @export
 var stage_level: int = 4
 
+## 英雄坦克声明数
+@export
+var hero_tank_life: int = 3
+
+## 英雄坦克
+var hero_tank: TankNode
+
+### 敌人总数
+@export
+var enemy_total_count: int = 20
+
+### 敌人参战数
+@export
+var enemy_war_count: int = 5
+
 ## 地图地砖的预制体
 @onready
 var _tiled_prefab = preload("res://sprites/map_tiled_node.scn")
 
+## 玩家基地对象
+@onready
+var _player_master = preload("res://sprites/master_node.scn").instantiate()
+
 func _ready() -> void:
-	## 计算界面要绘制的矩形大小，确定战场边界等内容
+	set_process(true)
+	# 计算界面要绘制的矩形大小，确定战场边界等内容
 	_viewport_rect = get_viewport() \
 		.get_visible_rect()
 	var viewport_size = _viewport_rect.size
@@ -23,30 +43,46 @@ func _ready() -> void:
 	var war_offset_y = viewport_size.y/2.0 - Constants.WarMapSize/2.0
 	_war_map_rect = Rect2(war_offset_x, war_offset_y, \
 		Constants.WarMapSize, Constants.WarMapSize)
-	## 修改地图图层位置
+	# 修改关卡幕布位置
+	var stage_curtain_size = $StageCurtain.size
+	$StageCurtain.position = viewport_size / 2.0 - stage_curtain_size / 2.0
+	# 修改地图图层位置
 	$WarRootMap.position = Vector2(war_offset_x, war_offset_y)
 	$WarRootMap.set_size(_war_map_rect.size, false)
-	## 修改草地图层位置
+	# 修改草地图层位置
 	$GrassMap.position = Vector2(war_offset_x, war_offset_y)
 	$GrassMap.set_size(_war_map_rect.size, false)
-	## 绘制游戏地图图层
-	_draw_stage_map()
-	## 修改坦克图层位置
+
+	self._draw_stage_map() # 绘制游戏地图图层
+
+	# 修改坦克图层位置
 	$TankLayer.position = Vector2(war_offset_x, war_offset_y)
 	$TankLayer.set_size(_war_map_rect.size, false)
 
-	## 设置坦克的可运动的边界
-	var boundary_min = Vector2.ZERO
-	var boundary_max = Vector2(Constants.WarMapSize, Constants.WarMapSize)
+	_create_hero_tank() # 创建英雄坦克
 
-	var hero_tank = TankCreator.create_hero_tank()
-	$TankLayer.add_child(hero_tank);
+	$AudioManager.play_game_start() # 播放游戏开始的音效
+	$StageCurtain/AnimationPlayer.play('stage_curtain_slide_up') # 打开游戏关卡幕布
 
-	var enemy_tank = TankCreator.create_enemy_tank(TankRoleType.Enemy2, TankCreator.CREATE_LCOATION_CENTER)
-	$TankLayer.add_child(enemy_tank);
+	self._bind_event_bus() # 绑定事件通知
+
+## 绑定事件通知
+func _bind_event_bus():
+	GlobalEventBus.master_damaged\
+		.connect(func(): print('总部被摧毁'))
+	GlobalEventBus.player_damaged\
+		.connect(func(): print('玩家被消灭'))
+	GlobalEventBus.player_get_prop\
+		.connect(func(): print('玩家获得道具'))
+	GlobalEventBus.enemy_damaged\
+		.connect(func(tank): print('敌人被消灭： ', tank))
+
+@warning_ignore('unused_parameter')
+func _process(delta: float) -> void:
+	_create_enemy_tank() #检测并创建地方坦克
 
 func _draw() -> void:
-	draw_rect(_viewport_rect, Color.GRAY)
+	draw_rect(_viewport_rect, Color(127, 127, 127, 255))
 	draw_rect(_war_map_rect, Color.BLACK)
 
 ## 绘制关卡地址
@@ -60,10 +96,60 @@ func _draw_stage_map():
 			var tiled_type = MapTiledType.get_tiled_type(value)
 			var tiled: MapTiledNode = _tiled_prefab.instantiate()
 			tiled.tiled_type = tiled_type
-			tiled.position = Vector2( \
-				pos_x + Constants.WarMapTiledSize/2.0, \
-				pos_y + Constants.WarMapTiledSize/2.0)
-			if tiled_type != MapTiledType.GRASS:
-				$WarRootMap.add_child(tiled)
-			else:
+			tiled.position = Vector2(pos_x + Constants.WarMapTiledSize/2.0, pos_y + Constants.WarMapTiledSize/2.0)
+			if tiled_type == MapTiledType.GRASS:
 				$GrassMap.add_child(tiled)
+				continue
+			$WarRootMap.add_child(tiled) # 地砖添加到战场地图
+	# 绘制玩家坦克基地
+	var master_x = Constants.WarMapSize/2.0
+	var master_y = Constants.WarMapSize - Constants.WarMapTiledSize
+	$WarRootMap.add_child(_player_master)
+	_player_master.position = Vector2(master_x, master_y)
+
+## 创建英雄坦克
+func _create_hero_tank():
+	hero_tank = TankCreator.create_hero_tank()
+	$TankLayer.add_child(hero_tank);
+
+## 通过定时器添加敌方坦克
+func _create_enemy_tank():
+	var children = $TankLayer.get_children()
+	var total_enemy_count = 0
+	var tanks: Array[TankNode] = []
+	for child in children:
+		if child is TankNode:
+			total_enemy_count += 1
+			tanks.append(child as TankNode)
+	if not (total_enemy_count < enemy_war_count && enemy_total_count > 0): return
+	var diff_count = abs(enemy_war_count - total_enemy_count)
+	var locations = [TankCreator.CREATE_LCOATION_CENTER, TankCreator.CREATE_LOCATION_LEFT, TankCreator.CREATE_LOCATION_RIGHT]
+	var locationRects = [
+		Rect2(Constants.WarMapSize/2.0 - Constants.WarMapTiledSize, 0, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
+		Rect2(0, 0, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
+		Rect2(Constants.WarMapSize - Constants.WarMapTiledBigSize, 0, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
+	]
+	for i in range(0, diff_count):
+		var target_location: int = -100000
+		for index in range(0, locationRects.size()):
+			var rect = locationRects[index]
+			var location = locations[index]
+			if tanks.any(func(item): return _no_other_tank_in_location(rect, item)):
+				target_location = location
+				break
+		if target_location != -100000:
+			var rv = randf()
+			var type = TankRoleType.Enemy1
+			if rv < 0.6:
+				type = TankRoleType.Enemy1
+			elif type < 0.8:
+				type = TankRoleType.Enemy2
+			else:
+				type = TankRoleType.Enemy3
+			var tank = TankCreator.create_enemy_tank(type, target_location)
+			$TankLayer.add_child(tank);
+			tanks.append(tank) #需要记录这个新添加的
+
+func _no_other_tank_in_location(target_rect: Rect2, tank: TankNode) -> bool:
+	var tank_rect = Rect2(tank.position.x, tank.position.y, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize)
+	return not tank_rect.intersects(target_rect, true)

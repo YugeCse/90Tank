@@ -20,3 +20,13 @@ static func get_role_sprite_sheet(role: int):
 	elif role == Enemy3:
 		return load("res://assets/images/tank_enemy_3.png")
 	return load("res://assets/images/tank_hero_1.png")
+
+## 根据坦克角色获取得分
+static func get_score_by_role(role: int):
+	if role == Enemy1:
+		return 100
+	elif role == Enemy2:
+		return 200
+	elif role == Enemy3:
+		return 500
+	return 100
