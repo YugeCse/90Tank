@@ -97,11 +97,33 @@ script = ExtResource("1_cqh8l")
 script = ExtResource("2_jjcd7")
 metadata/_custom_type_script = "uid://b5su4eug3qic6"
 
-[node name="WarRootMap" type="Control" parent="."]
-layout_mode = 3
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 1200.0
+offset_bottom = 800.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+color = Color(0.498039, 0.498039, 0.498039, 1)
+
+[node name="WarRootMap" type="ColorRect" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 387.0
+offset_top = 176.0
+offset_right = 803.0
+offset_bottom = 592.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+color = Color(0, 0, 0, 1)
 
 [node name="TankLayer" type="Control" parent="."]
 layout_mode = 3
@@ -117,14 +139,20 @@ anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
+[node name="PropMap" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 416.0
+offset_bottom = 416.0
+
 [node name="StageCurtain" type="Control" parent="."]
 clip_contents = true
 layout_mode = 3
 anchors_preset = 0
-offset_left = 446.0
-offset_top = 178.0
-offset_right = 958.0
-offset_bottom = 626.0
+offset_left = 323.0
+offset_top = 164.0
+offset_right = 835.0
+offset_bottom = 612.0
 
 [node name="ColorRect" type="ColorRect" parent="StageCurtain"]
 layout_mode = 0

@@ -1,16 +1,23 @@
+## 道具节点
 class_name PropNode
 extends Sprite2D
 
+## 炸弹道具
 const TYPE_BOMB = 0
 
+## 帽子道具
 const TYPE_HAT = 1
 
+## 金砖基地的道具
 const TYPE_MASTER = 2
 
+## 五角星道具，达到3颗星可以消除草地
 const TYPE_STAR = 3
 
+## 增加玩家人数的道具
 const TYPE_TANK = 4
 
+## 定时器道具
 const TYPE_TIMER = 5
 
 ## 道具类型
@@ -19,7 +26,15 @@ var prop_type: int = TYPE_HAT
 ## 道具得分
 var prop_score: int = 100
 
+## 闪烁动画对象
+var blink_tween: Tween
+
 func _ready() -> void:
+	self._initialize()
+	self._start_blink()
+
+## 初始化
+func _initialize():
 	match prop_type:
 		TYPE_BOMB:
 			prop_score = 500
@@ -39,3 +54,12 @@ func _ready() -> void:
 		TYPE_TIMER:
 			prop_score = 100
 			self.texture = load('res://assets/images/prop_timer.png')
+
+## 开始闪烁
+func _start_blink():
+	blink_tween = create_tween().set_loops()
+	blink_tween.tween_property(self, "modulate:a", 0, 0.3)
+	blink_tween.tween_property(self, "modulate:a", 1.0, 0.3)
+
+func _exit_tree() -> void:
+	blink_tween.kill()

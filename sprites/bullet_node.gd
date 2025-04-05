@@ -87,16 +87,12 @@ func _handle_collision_with(collider: Object) -> void:
 			GlobalEventBus.emit_signal(&'master_damaged')
 	elif collider is CharacterBody2D: # 一般为坦克或者其他子弹
 		if collider is TankNode:
-			if collider.role == TankRoleType.Hero:
-				$AudioManager.play_player_crack()
-			else:
-				$AudioManager.play_tank_crack()
-			_show_bomb_effect() #显示爆炸效果
-			(collider as TankNode).hurt()
+			_show_bomb_effect() # 显示爆炸效果
+			(collider as TankNode).hurt() # 坦克受伤处理
 		elif collider is BulletNode:
 			queue_free() # 子弹与子弹碰撞，直接销毁
 			collider.queue_free() # 子弹与子弹碰撞，直接销毁
-			$AudioManager.play_bullet_crack()
+			$AudioManager.play_bullet_crack() # 播放子弹对撞声音
 
 ## 设置碰撞矩形大小
 func _set_collision_shape(size: Vector2):

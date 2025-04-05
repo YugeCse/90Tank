@@ -25,9 +25,19 @@ var enemy_total_count: int = 20
 @export
 var enemy_war_count: int = 5
 
+## 玩机得分
+var hero_win_score: int = 0
+
+## 坦克加强道具
+var _tank_strong_prop: PropNode
+
 ## 地图地砖的预制体
 @onready
 var _tiled_prefab = preload("res://sprites/map_tiled_node.scn")
+
+## 坦克道具预制体
+@onready
+var _tank_prop_prefab = preload('res://sprites/prop_node.tscn')
 
 ## 玩家基地对象
 @onready
@@ -52,6 +62,9 @@ func _ready() -> void:
 	# 修改草地图层位置
 	$GrassMap.position = Vector2(war_offset_x, war_offset_y)
 	$GrassMap.set_size(_war_map_rect.size, false)
+	# 创建道具图层
+	$PropMap.position = Vector2(war_offset_x, war_offset_y)
+	$PropMap.set_size(_war_map_rect.size, false)
 
 	self._draw_stage_map() # 绘制游戏地图图层
 
@@ -71,15 +84,18 @@ func _bind_event_bus():
 	GlobalEventBus.master_damaged\
 		.connect(func(): print('总部被摧毁'))
 	GlobalEventBus.player_damaged\
-		.connect(func(): print('玩家被消灭'))
+		.connect(func(): print('玩家被消灭'); _create_hero_tank())
 	GlobalEventBus.player_get_prop\
-		.connect(func(): print('玩家获得道具'))
+		.connect(func(): print('玩家获得道具'); _dismiss_strong_prop())
 	GlobalEventBus.enemy_damaged\
-		.connect(func(tank): print('敌人被消灭： ', tank))
+		.connect(func(tank): \
+			print('敌人被消灭： ', tank);\
+			enemy_total_count -= 1)
+	GlobalEventBus.show_strong_prop.connect(func(): _show_strong_prop())
 
 @warning_ignore('unused_parameter')
 func _process(delta: float) -> void:
-	_create_enemy_tank() #检测并创建地方坦克
+	_create_enemy_tank_if_neccessary() #检测并创建地方坦克
 
 func _draw() -> void:
 	draw_rect(_viewport_rect, Color(127, 127, 127, 255))
@@ -107,13 +123,34 @@ func _draw_stage_map():
 	$WarRootMap.add_child(_player_master)
 	_player_master.position = Vector2(master_x, master_y)
 
+## 显示加强道具
+func _show_strong_prop():
+	self._dismiss_strong_prop()
+	var prop_type = PropNode.TYPE_HAT
+	_tank_strong_prop = _tank_prop_prefab.instantiate()
+	_tank_strong_prop.prop_type = prop_type
+	_tank_strong_prop.position = Vector2(
+		randi_range(Constants.WarMapTiledSize,\
+			Constants.WarMapSize - Constants.WarMapTiledSize),
+		randi_range(Constants.WarMapTiledSize,\
+			Constants.WarMapSize - Constants.WarMapTiledSize))
+	if prop_type == PropNode.TYPE_TANK:
+		$AudioManager.play_prop() #播放坦克加人的道具音效
+	$PropMap.add_child(_tank_strong_prop) # 添加道具地图
+
+## 隐藏道具节点
+func _dismiss_strong_prop():
+	if _tank_strong_prop:
+		_tank_strong_prop.free()
+	_tank_strong_prop = null
+
 ## 创建英雄坦克
 func _create_hero_tank():
 	hero_tank = TankCreator.create_hero_tank()
 	$TankLayer.add_child(hero_tank);
 
 ## 通过定时器添加敌方坦克
-func _create_enemy_tank():
+func _create_enemy_tank_if_neccessary():
 	var children = $TankLayer.get_children()
 	var total_enemy_count = 0
 	var tanks: Array[TankNode] = []
@@ -147,9 +184,14 @@ func _create_enemy_tank():
 			else:
 				type = TankRoleType.Enemy3
 			var tank = TankCreator.create_enemy_tank(type, target_location)
-			$TankLayer.add_child(tank);
-			tanks.append(tank) #需要记录这个新添加的
+			tanks.append(tank) # 需要记录这个新添加的
+			enemy_total_count -= 1 # 每次坦克总数减少1
+			if enemy_total_count % 3 == 0 and\
+				type != TankRoleType.Enemy3:
+				tank.is_red_tank = true # 标记为红坦克
+			$TankLayer.add_child(tank); # 添加创建的坦克到新节点中
 
+## 判断这个位置是否有其他坦克存在
 func _no_other_tank_in_location(target_rect: Rect2, tank: TankNode) -> bool:
 	var tank_rect = Rect2(tank.position.x, tank.position.y, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize)
 	return not tank_rect.intersects(target_rect, true)

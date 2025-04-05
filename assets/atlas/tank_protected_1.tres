@@ -1,0 +1,8 @@
+[gd_resource type="AtlasTexture" load_steps=2 format=3 uid="uid://b0pm3rh7o6lg"]
+
+[ext_resource type="Texture2D" uid="uid://dh6dw2toigwty" path="res://assets/images/tank_protect_clothes.png" id="1_h5ggx"]
+
+[resource]
+atlas = ExtResource("1_h5ggx")
+region = Rect2(0, 32, 32, 32)
+filter_clip = true

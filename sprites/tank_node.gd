@@ -33,13 +33,19 @@ var current_state = TankState.BORN
 var props: Array[PropNode] = []
 
 ## 是否是红坦克
-var _is_red_tank: bool = false
+var is_red_tank: bool = false
 
 ## 上次发射子弹的时间
 var _shoot_time: float = 0.0
 
+## 保护模式的持续时间，一般为15s
+var protect_hold_time: float = 0.0
+
 ## 移动用的Timer对象
 var _move_timer: Timer = Timer.new()
+
+## 闪烁动画对象
+var _red_tank_blink_tween: Tween
 
 ## 坦克帧集合
 var _tank_sprite_frames: Dictionary = {}
@@ -58,19 +64,23 @@ var _tank_bullet_prefab = preload("res://sprites/bullet_node.scn")
 
 ## 准备方法
 func _ready() -> void:
-	_initialize() #初始化
-	if role != TankRoleType.Hero:
-		_add_auto_move_timer()
-		self.collision_layer = CollisionLayer.EnemyTank
-		self.collision_mask &= ~CollisionLayer.EnemyTank
-		self.collision_mask &= ~CollisionLayer.EnemyBullet
-	else:
-		self.collision_layer = CollisionLayer.HeroTank
-		self.collision_mask &= ~CollisionLayer.HeroBullet
+	self._initialize() #初始化
 	self._show_born_effect() #显示出生特效
 
 ## 初始化
 func _initialize():
+	if role != TankRoleType.Hero:
+		if role == TankRoleType.Enemy3:
+			hits_of_received = 3 # 如果是Enemy3，抗击打能力设置为3
+		_add_auto_move_timer()
+		self.collision_layer = CollisionLayer.EnemyTank
+		self.collision_mask &= ~CollisionLayer.EnemyTank
+		self.collision_mask &= ~CollisionLayer.EnemyBullet
+		if is_red_tank: # 如果是红色坦克
+			self._start_blink() # 是红坦克，就开始闪烁
+	else:
+		self.collision_layer = CollisionLayer.HeroTank
+		self.collision_mask &= ~CollisionLayer.HeroBullet
 	var tank_sprite_sheet = TankRoleType\
 		.get_role_sprite_sheet(role)
 	_tank_sprite_frames = \
@@ -79,6 +89,14 @@ func _initialize():
 
 ## 处理每帧的事件
 func _process(delta: float) -> void:
+	if current_state == TankState.STRONG:
+		protect_hold_time += delta
+		if protect_hold_time > 15.0: # 如果是无敌模式，就持续15s，15s后就还原状态
+			current_state = TankState.ALIVE
+			protect_hold_time = 0.0 # 还原保护特效时间
+			if $ProtectedAnimation.is_playing():
+				$ProtectedAnimation.stop() # 停止动画输出
+			$ProtectedAnimation.visible = false
 	if role == TankRoleType.Hero:
 		if current_state != TankState.ALIVE and\
 			current_state != TankState.STRONG:
@@ -138,9 +156,16 @@ func has_collision_in_direction(dir: Vector2) -> bool:
 # 防卡墙增强逻辑
 func _safe_move(delta: float, direction: Vector2):
 	var target_velocity = direction * speed
-	if move_and_collide(target_velocity * delta, true):
-		return
-	move_and_collide(target_velocity * delta)
+	var collider = move_and_collide(target_velocity * delta)
+	if collider:
+		collider = collider.get_collider()
+		if collider is StaticBody2D: # 如果与静态刚体节点碰撞
+			collider = collider.get_parent()
+			if collider is PropNode: # 如果是道具节点，则执行下面逻辑
+				var prop_type = (collider as PropNode).prop_type
+				if prop_type == PropNode.TYPE_HAT: # 如果保护帽，则显示特效
+					self._append_protected_effect()
+				GlobalEventBus.emit_signal('player_get_prop') # 发送获得道具的通知
 
 ## 退出树节点事件
 func _exit_tree() -> void:
@@ -170,7 +195,7 @@ func _change_direction_by_timer():
 
 ## 发送子弹
 func shoot():
-	var bullet = _tank_bullet_prefab.instantiate()
+	var bullet: BulletNode = _tank_bullet_prefab.instantiate()
 	bullet.owner_role = role
 	if role == TankRoleType.Enemy2: # 这种坦克速度快，因此子弹速度要快
 		bullet.speed *= 1.5
@@ -186,39 +211,54 @@ func hurt():
 	if current_state == TankState.STRONG:
 		# 坦克处于无敌模式，无法被攻击
 		return
-	if hits_of_received == 1: # 坦克爆炸
-		_show_bomb_effect()
+	if is_red_tank: # 如果是红坦克，需要展示道具
+		is_red_tank = false # 设置红色坦克属性取消
+		self._stop_blink() # 停止红坦克闪烁
+		GlobalEventBus.emit_signal('show_strong_prop')
 		return
-	else:
-		hits_of_received -= 1 #抗击打能力每次减少1
+	hits_of_received -= 1 # 抗击打能力每次减少1
+	if hits_of_received <= 0: # 为0时坦克爆炸
+		_show_bomb_effect() # 显示爆炸效果
 
 ## 显示出生特效
 func _show_born_effect():
 	current_state = TankState.BORN
-	$TankSprite.visible = false
-	$AnimatedSprite2D.visible = true
-	$AnimatedSprite2D.play("Born")
-	$AnimatedSprite2D.animation_finished\
-		.connect(func(): \
-			$AnimatedSprite2D.visible = false; \
+	if role == TankRoleType.Hero: # 如果是玩家，出生时，追加保护效果
+		_append_protected_effect()
+	var on_animation_finished = func(): \
+			$BornAndDeadAnimation.visible = false; \
 			$TankSprite.visible = true; \
-			current_state = TankState.ALIVE)
+			if current_state == TankState.BORN:\
+				current_state = TankState.ALIVE
+	$TankSprite.visible = false
+	$BornAndDeadAnimation.visible = true
+	$BornAndDeadAnimation.play("Born")
+	$BornAndDeadAnimation.animation_finished.connect(on_animation_finished)
 
-## 显示爆炸特效
+## 追加保护特效，无敌模式
+func _append_protected_effect():
+	protect_hold_time = 0.0 # 持续时间归零
+	current_state = TankState.STRONG
+	$ProtectedAnimation.visible = true
+	$ProtectedAnimation.play('Protected')
+
+## 显示爆炸特效，摧毁坦克节点
 func _show_bomb_effect():
+	current_state = TankState.DEAD
 	if role != TankRoleType.Hero:
 		_remove_auto_move_timer() # 需要删除自动移动的逻辑
 	velocity = Vector2.ZERO
 	current_direction = Vector2.ZERO
-	current_state = TankState.DEAD
 	$TankCollisionShape\
 		.set_deferred('disabled', true)
-	$AnimatedSprite2D.visible = true
-	$AnimatedSprite2D.play("Bomb")
-	$AnimatedSprite2D.connect('animation_finished', _on_tank_damaged)
+	$BornAndDeadAnimation.visible = true
+	$BornAndDeadAnimation.play("Bomb")
+	$BornAndDeadAnimation.connect('animation_finished', _on_tank_damaged)
 	if role != TankRoleType.Hero:
+		$AudioManager.play_tank_crack()
 		GlobalEventBus.emit_signal('enemy_damaged', self)
 	else:
+		$AudioManager.play_player_crack()
 		GlobalEventBus.emit_signal('player_damaged')
 
 ## 敌人坦克被摧毁
@@ -246,3 +286,13 @@ func _get_sprite_frames(sprite_sheet: Resource):
 		atlas.region = Rect2(i * 32, 0, 32, 32)
 		sprite_frames[dirs[i]] = atlas
 	return sprite_frames
+
+## 开始闪烁
+func _start_blink():
+	_red_tank_blink_tween = create_tween().set_loops()
+	_red_tank_blink_tween.tween_property($TankSprite, 'modulate', Color.WHITE, 0.3)
+	_red_tank_blink_tween.tween_property($TankSprite, 'modulate', Color.CRIMSON, 0.3)
+
+# 停止闪烁
+func _stop_blink():
+	_red_tank_blink_tween.kill()

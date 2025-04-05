@@ -5,5 +5,7 @@ signal master_damaged()
 signal player_damaged()
 ## 敌人被击毙
 signal enemy_damaged(TankNode)
+## 显示加强道具
+signal show_strong_prop()
 ## 玩家获得道具
 signal player_get_prop(PropNode)
