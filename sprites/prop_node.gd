@@ -61,5 +61,14 @@ func _start_blink():
 	blink_tween.tween_property(self, "modulate:a", 0, 0.3)
 	blink_tween.tween_property(self, "modulate:a", 1.0, 0.3)
 
-func _exit_tree() -> void:
+## 停止闪烁
+func _stop_blink():
 	blink_tween.kill()
+
+## 停止闪烁
+func _exit_tree() -> void:
+	self._stop_blink()
+
+### 显示分数，然后消失
+#func show_score_then_dismiss():
+	#self._stop_blink()

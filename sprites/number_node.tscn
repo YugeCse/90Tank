@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://bhefv437f3gwo"]
+
+[ext_resource type="Script" uid="uid://dmog2jrkku6tg" path="res://sprites/number_node.gd" id="1_uid1b"]
+
+[node name="HBoxContainer" type="HBoxContainer"]
+offset_top = 20.0
+offset_bottom = 20.0
+alignment = 1
+script = ExtResource("1_uid1b")

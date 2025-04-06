@@ -31,6 +31,9 @@ var hero_win_score: int = 0
 ## 坦克加强道具
 var _tank_strong_prop: PropNode
 
+## 基地金砖节点，玩家拾取铁锹道具时拥有
+var _master_grid_nodes: Array[MapTiledNode] = []
+
 ## 地图地砖的预制体
 @onready
 var _tiled_prefab = preload("res://sprites/map_tiled_node.scn")
@@ -45,17 +48,29 @@ var _player_master = preload("res://sprites/master_node.scn").instantiate()
 
 func _ready() -> void:
 	set_process(true)
+	self._init_layout() # 初始化布局
+	self._bind_event_bus() # 绑定事件通知
+	self._create_hero_tank() # 创建英雄坦克
+
+# 初始化布局
+func _init_layout():
 	# 计算界面要绘制的矩形大小，确定战场边界等内容
 	_viewport_rect = get_viewport() \
 		.get_visible_rect()
 	var viewport_size = _viewport_rect.size
-	var war_offset_x = viewport_size.x/2.0 - Constants.WarMapSize/2.0
+	var war_offset_x = viewport_size.x/2.0 - Constants.WarMapSize/2.0\
+		- Constants.WarMapTiledBigSize
 	var war_offset_y = viewport_size.y/2.0 - Constants.WarMapSize/2.0
 	_war_map_rect = Rect2(war_offset_x, war_offset_y, \
 		Constants.WarMapSize, Constants.WarMapSize)
+	# 调整侧边栏的位置
+	$SideBarContainer.position = Vector2(_war_map_rect.end.x +\
+		Constants.WarMapTiledSize/4.0, war_offset_y)
 	# 修改关卡幕布位置
 	var stage_curtain_size = $StageCurtain.size
-	$StageCurtain.position = viewport_size / 2.0 - stage_curtain_size / 2.0
+	$StageCurtain.position = viewport_size/2.0 - stage_curtain_size/2.0
+	$StageCurtain/StageLevelContainer.size_flags_vertical = Control.SIZE_EXPAND
+	$StageCurtain/StageLevelContainer.size_flags_horizontal = Control.SIZE_EXPAND
 	# 修改地图图层位置
 	$WarRootMap.position = Vector2(war_offset_x, war_offset_y)
 	$WarRootMap.set_size(_war_map_rect.size, false)
@@ -72,12 +87,8 @@ func _ready() -> void:
 	$TankLayer.position = Vector2(war_offset_x, war_offset_y)
 	$TankLayer.set_size(_war_map_rect.size, false)
 
-	_create_hero_tank() # 创建英雄坦克
-
 	$AudioManager.play_game_start() # 播放游戏开始的音效
 	$StageCurtain/AnimationPlayer.play('stage_curtain_slide_up') # 打开游戏关卡幕布
-
-	self._bind_event_bus() # 绑定事件通知
 
 ## 绑定事件通知
 func _bind_event_bus():
@@ -96,6 +107,10 @@ func _bind_event_bus():
 @warning_ignore('unused_parameter')
 func _process(delta: float) -> void:
 	_create_enemy_tank_if_neccessary() #检测并创建地方坦克
+	if hero_tank_life < 0:
+		hero_tank_life = 0
+	$SideBarContainer/Player1/NumberNode.set_number(hero_tank_life)
+	$SideBarContainer/StageLevelFlag/NumberNode.set_number(stage_level + 1)
 
 func _draw() -> void:
 	draw_rect(_viewport_rect, Color(127, 127, 127, 255))
@@ -110,18 +125,43 @@ func _draw_stage_map():
 			var pos_y = y * Constants.WarMapTiledSize
 			var value = stage_level_map[y][x]
 			var tiled_type = MapTiledType.get_tiled_type(value)
-			var tiled: MapTiledNode = _tiled_prefab.instantiate()
-			tiled.tiled_type = tiled_type
-			tiled.position = Vector2(pos_x + Constants.WarMapTiledSize/2.0, pos_y + Constants.WarMapTiledSize/2.0)
+			var tiled_node: MapTiledNode = _tiled_prefab.instantiate()
+			tiled_node.tiled_type = tiled_type
+			tiled_node.position = Vector2(pos_x + Constants.WarMapTiledSize/2.0,\
+				pos_y + Constants.WarMapTiledSize/2.0)
 			if tiled_type == MapTiledType.GRASS:
-				$GrassMap.add_child(tiled)
+				$GrassMap.add_child(tiled_node)
 				continue
-			$WarRootMap.add_child(tiled) # 地砖添加到战场地图
+			var master_x = Constants.WarMapTiledCount/2-2
+			var master_y = Constants.WarMapTiledCount-3
+			if x >= master_x and x <= master_x + 3 \
+				and y >= master_y and y <= master_y + 3:
+					if x >= master_x+1 and x <= master_x+2 \
+						and y >= master_y+1 and y <= master_y+2:
+							continue
+					# tiled.tiled_type = MapTiledType.GRID
+					_master_grid_nodes.append(tiled_node) # 添加基地节点
+			$WarRootMap.add_child(tiled_node) # 地砖添加到战场地图
 	# 绘制玩家坦克基地
 	var master_x = Constants.WarMapSize/2.0
 	var master_y = Constants.WarMapSize - Constants.WarMapTiledSize
-	$WarRootMap.add_child(_player_master)
 	_player_master.position = Vector2(master_x, master_y)
+	$WarRootMap.add_child(_player_master)
+
+	# self._show_master_grid_nodes() # 构建金砖节点，放置在玩家地址位置
+
+## 构建金砖节点，放置在玩家基地
+func _show_master_grid_nodes():
+	var offset_x = Constants.WarMapTiledSize
+	var offset_y = Constants.WarMapTiledSize
+	var start_offset = Vector2(Constants.WarMapSize/2.0-2.5 * Constants.WarMapTiledSize,
+		Constants.WarMapSize-3.5 * Constants.WarMapTiledSize) + Vector2(offset_x, offset_y)
+	for node in _master_grid_nodes:
+		node.set_tiled_type(MapTiledType.GRID)
+		print(node.position)
+		if node.get_parent():
+			continue
+		$WarRootMap.add_child(node)
 
 ## 显示加强道具
 func _show_strong_prop():
@@ -146,6 +186,11 @@ func _dismiss_strong_prop():
 
 ## 创建英雄坦克
 func _create_hero_tank():
+	if hero_tank_life > 1:
+		hero_tank_life -= 1
+	if hero_tank_life == 0:
+		print('游戏结束，玩家没有生命数了')
+		return
 	hero_tank = TankCreator.create_hero_tank()
 	$TankLayer.add_child(hero_tank);
 

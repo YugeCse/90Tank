@@ -139,25 +139,25 @@ func handle_input(delta: float):
 
 ## 设置坦克方向
 func change_direction(dir_key: String):
-	$TankSprite.texture = _tank_sprite_frames[dir_key]
 	current_direction = directions[dir_key]
+	$TankSprite.texture = _tank_sprite_frames[dir_key]
 	# 立即检测新方向是否可行
-	if has_collision_in_direction(current_direction):
-		velocity = Vector2.ZERO
+	#if has_collision_in_direction(current_direction):
+		#velocity = Vector2.ZERO
 
 # 碰撞预检测
-func has_collision_in_direction(dir: Vector2) -> bool:
-	var params = PhysicsTestMotionParameters2D.new()
-	params.from = global_transform
-	params.motion = dir * ($TankCollisionShape.shape\
-		.get_rect().size.x / 2 + 2)
-	return PhysicsServer2D.body_test_motion(get_rid(), params)
+#func has_collision_in_direction(dir: Vector2) -> bool:
+	#var params = PhysicsTestMotionParameters2D.new()
+	#params.from = global_transform
+	#params.motion = dir * ($TankCollisionShape.shape\
+		#.get_rect().size.x / 2 + 2)
+	#return PhysicsServer2D.body_test_motion(get_rid(), params)
 
 # 防卡墙增强逻辑
 func _safe_move(delta: float, direction: Vector2):
 	var target_velocity = direction * speed
 	var collider = move_and_collide(target_velocity * delta)
-	if collider:
+	if collider: # 如果有发生碰撞，则判断碰撞的是什么内容
 		collider = collider.get_collider()
 		if collider is StaticBody2D: # 如果与静态刚体节点碰撞
 			collider = collider.get_parent()
@@ -165,6 +165,8 @@ func _safe_move(delta: float, direction: Vector2):
 				var prop_type = (collider as PropNode).prop_type
 				if prop_type == PropNode.TYPE_HAT: # 如果保护帽，则显示特效
 					self._append_protected_effect()
+				elif prop_type == PropNode.TYPE_STAR: # 如果是五角星，拾取五角星
+					self.props.append(collider)
 				GlobalEventBus.emit_signal('player_get_prop') # 发送获得道具的通知
 
 ## 退出树节点事件
@@ -198,10 +200,11 @@ func shoot():
 	var bullet: BulletNode = _tank_bullet_prefab.instantiate()
 	bullet.owner_role = role
 	if role == TankRoleType.Enemy2: # 这种坦克速度快，因此子弹速度要快
-		bullet.speed *= 1.5
-	bullet.current_direction = current_direction.normalized()
-	bullet.position = position + \
+		bullet.speed *= 1.50
+	var bullet_position = self.position + \
 		bullet.current_direction * Constants.WarMapTiledSize
+	bullet.position = bullet_position
+	bullet.current_direction = current_direction.normalized()
 	if role == TankRoleType.Hero:
 		$AudioManager.play_attack_sound() # 播放攻击的声音
 	get_parent().add_child(bullet) # 把子弹添加到父节点中去

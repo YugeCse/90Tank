@@ -1,9 +1,12 @@
-[gd_scene load_steps=8 format=3 uid="uid://831xnm84ycoi"]
+[gd_scene load_steps=11 format=3 uid="uid://831xnm84ycoi"]
 
 [ext_resource type="Script" uid="uid://ddbr8j0fm3lhu" path="res://scenes/game_main_scene.gd" id="1_cqh8l"]
 [ext_resource type="Script" uid="uid://b5su4eug3qic6" path="res://scripts/audio_manager.gd" id="2_jjcd7"]
 [ext_resource type="Texture2D" uid="uid://c5a8j1judxedc" path="res://assets/images/stage_level.png" id="3_o4ak3"]
-[ext_resource type="Texture2D" uid="uid://cljvhkvh3co5w" path="res://assets/images/num_1.png" id="4_b03q8"]
+[ext_resource type="Script" uid="uid://dmog2jrkku6tg" path="res://sprites/number_node.gd" id="4_b03q8"]
+[ext_resource type="Texture2D" uid="uid://by6pj7ns1cc01" path="res://assets/images/player_1.png" id="5_yt75v"]
+[ext_resource type="Texture2D" uid="uid://bbmn5euxagpo2" path="res://assets/images/player_2.png" id="6_gd5mj"]
+[ext_resource type="Texture2D" uid="uid://7vx6aitfvb6q" path="res://assets/images/stage_flag.png" id="7_18dyl"]
 
 [sub_resource type="Animation" id="Animation_6mcyx"]
 length = 0.001
@@ -34,7 +37,7 @@ tracks/1/keys = {
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("HBoxContainer:visible")
+tracks/2/path = NodePath("StageLevelContainer:visible")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
@@ -74,7 +77,7 @@ tracks/1/keys = {
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("HBoxContainer:visible")
+tracks/2/path = NodePath("StageLevelContainer:visible")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
@@ -116,9 +119,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = 387.0
-offset_top = 176.0
+offset_top = 177.0
 offset_right = 803.0
-offset_bottom = 592.0
+offset_bottom = 593.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
@@ -128,24 +131,29 @@ color = Color(0, 0, 0, 1)
 [node name="TankLayer" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 0
-offset_left = 542.0
-offset_top = 162.0
-offset_right = 958.0
-offset_bottom = 578.0
+offset_left = 374.0
+offset_top = 163.0
+offset_right = 790.0
+offset_bottom = 579.0
 
 [node name="GrassMap" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+offset_left = 363.0
+offset_top = 145.0
+offset_right = 779.0
+offset_bottom = 561.0
 
 [node name="PropMap" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 0
-offset_right = 416.0
-offset_bottom = 416.0
+offset_left = 392.0
+offset_top = 154.0
+offset_right = 808.0
+offset_bottom = 570.0
 
 [node name="StageCurtain" type="Control" parent="."]
+visible = false
 clip_contents = true
 layout_mode = 3
 anchors_preset = 0
@@ -167,25 +175,112 @@ offset_right = 512.0
 offset_bottom = 448.0
 color = Color(0.498039, 0.498039, 0.498039, 1)
 
-[node name="HBoxContainer" type="HBoxContainer" parent="StageCurtain"]
+[node name="StageLevelContainer" type="HBoxContainer" parent="StageCurtain"]
+custom_minimum_size = Vector2(92, 14)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
+offset_left = -46.0
+offset_top = -7.0
+offset_right = 46.0
+offset_bottom = 7.0
 grow_horizontal = 2
 grow_vertical = 2
+pivot_offset = Vector2(0.5, 0.5)
 theme_override_constants/separation = 5
+alignment = 1
 
-[node name="Sprite2D" type="Sprite2D" parent="StageCurtain/HBoxContainer"]
+[node name="StageLevel" type="TextureRect" parent="StageCurtain/StageLevelContainer"]
+custom_minimum_size = Vector2(72, 14)
+layout_mode = 2
 texture = ExtResource("3_o4ak3")
 
-[node name="Sprite2D2" type="Sprite2D" parent="StageCurtain/HBoxContainer"]
-texture = ExtResource("4_b03q8")
+[node name="NumberNode" type="HBoxContainer" parent="StageCurtain/StageLevelContainer"]
+custom_minimum_size = Vector2(14, 14)
+layout_mode = 2
+alignment = 1
+script = ExtResource("4_b03q8")
+number = 12
+metadata/_custom_type_script = "uid://dmog2jrkku6tg"
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="StageCurtain"]
 libraries = {
 &"": SubResource("AnimationLibrary_i6jat")
 }
 movie_quit_on_finish = true
+
+[node name="SideBarContainer" type="VBoxContainer" parent="."]
+custom_minimum_size = Vector2(32, 416)
+offset_left = 806.0
+offset_top = 176.0
+offset_right = 852.0
+offset_bottom = 592.0
+theme_override_constants/separation = 40
+
+[node name="GridContainer" type="GridContainer" parent="SideBarContainer"]
+custom_minimum_size = Vector2(28, 140)
+layout_mode = 2
+columns = 2
+
+[node name="Player1" type="Control" parent="SideBarContainer"]
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="SideBarContainer/Player1"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("5_yt75v")
+
+[node name="NumberNode" type="HBoxContainer" parent="SideBarContainer/Player1"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 38.0
+offset_bottom = 38.0
+alignment = 1
+script = ExtResource("4_b03q8")
+metadata/_custom_type_script = "uid://dmog2jrkku6tg"
+
+[node name="Player2" type="Control" parent="SideBarContainer"]
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="SideBarContainer/Player2"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("6_gd5mj")
+
+[node name="NumberNode" type="HBoxContainer" parent="SideBarContainer/Player2"]
+custom_minimum_size = Vector2(14, 14)
+layout_mode = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 38.0
+offset_bottom = 38.0
+alignment = 1
+script = ExtResource("4_b03q8")
+metadata/_custom_type_script = "uid://dmog2jrkku6tg"
+
+[node name="StageLevelFlag" type="Control" parent="SideBarContainer"]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="SideBarContainer/StageLevelFlag"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("7_18dyl")
+
+[node name="NumberNode" type="HBoxContainer" parent="SideBarContainer/StageLevelFlag"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 24.0
+offset_right = 30.0
+offset_bottom = 38.0
+alignment = 1
+script = ExtResource("4_b03q8")
+metadata/_custom_type_script = "uid://dmog2jrkku6tg"
