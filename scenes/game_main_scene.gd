@@ -1,10 +1,23 @@
+class_name GameMainScene
 extends CanvasItem
+
+## 游戏状态 - 开始
+const GAME_STATE_START = 0
+
+## 游戏状态 - 暂停
+const GAME_STATE_PAUSE = 1
+
+## 游戏状态 - 结束
+const GAME_STATE_OVER = 2
 
 ## 视图矩形
 var _viewport_rect: Rect2
 
 ## 战场矩形
 var _war_map_rect: Rect2
+
+## 游戏状态
+var game_state: int = GAME_STATE_START
 
 ## 关卡数
 @export
@@ -58,17 +71,16 @@ func _init_layout():
 	_viewport_rect = get_viewport() \
 		.get_visible_rect()
 	var viewport_size = _viewport_rect.size
-	var war_offset_x = viewport_size.x/2.0 - Constants.WarMapSize/2.0\
+	var war_offset_x = viewport_size.x / 2.0 - Constants.WarMapSize / 2.0 \
 		- Constants.WarMapTiledBigSize
-	var war_offset_y = viewport_size.y/2.0 - Constants.WarMapSize/2.0
+	var war_offset_y = viewport_size.y / 2.0 - Constants.WarMapSize / 2.0
 	_war_map_rect = Rect2(war_offset_x, war_offset_y, \
 		Constants.WarMapSize, Constants.WarMapSize)
 	# 调整侧边栏的位置
-	$SideBarContainer.position = Vector2(_war_map_rect.end.x +\
-		Constants.WarMapTiledSize/4.0, war_offset_y)
+	$SideBarContainer.position = Vector2(_war_map_rect.end.x + 2.0, war_offset_y)
 	# 修改关卡幕布位置
 	var stage_curtain_size = $StageCurtain.size
-	$StageCurtain.position = viewport_size/2.0 - stage_curtain_size/2.0
+	$StageCurtain.position = viewport_size / 2.0 - stage_curtain_size / 2.0
 	$StageCurtain/StageLevelContainer.size_flags_vertical = Control.SIZE_EXPAND
 	$StageCurtain/StageLevelContainer.size_flags_horizontal = Control.SIZE_EXPAND
 	# 修改地图图层位置
@@ -80,6 +92,11 @@ func _init_layout():
 	# 创建道具图层
 	$PropMap.position = Vector2(war_offset_x, war_offset_y)
 	$PropMap.set_size(_war_map_rect.size, false)
+	# 游戏结束的显示图层
+	$GameOverContainer.position = $WarRootMap.position
+	$GameOverContainer/GameOverPic.position = Vector2(\
+		Constants.WarMapSize/2.0-$GameOverContainer/GameOverPic.get_rect().size.x/2.0,\
+		Constants.WarMapSize + Constants.WarMapTiledSize)
 
 	self._draw_stage_map() # 绘制游戏地图图层
 
@@ -92,23 +109,21 @@ func _init_layout():
 
 ## 绑定事件通知
 func _bind_event_bus():
-	GlobalEventBus.master_damaged\
-		.connect(func(): print('总部被摧毁'))
-	GlobalEventBus.player_damaged\
-		.connect(func(): print('玩家被消灭'); _create_hero_tank())
-	GlobalEventBus.player_get_prop\
+	GlobalEventBus.player_get_prop \
 		.connect(func(): print('玩家获得道具'); _dismiss_strong_prop())
-	GlobalEventBus.enemy_damaged\
+	GlobalEventBus.player_damaged \
+		.connect(func(): print('玩家被消灭'); _create_hero_tank())
+	GlobalEventBus.enemy_damaged \
 		.connect(func(tank): \
-			print('敌人被消灭： ', tank);\
+			print('敌人被消灭： ', tank); \
 			enemy_total_count -= 1)
+	GlobalEventBus.master_damaged \
+		.connect(func(): print('总部被摧毁'); _show_game_over_animation())
 	GlobalEventBus.show_strong_prop.connect(func(): _show_strong_prop())
 
 @warning_ignore('unused_parameter')
 func _process(delta: float) -> void:
-	_create_enemy_tank_if_neccessary() #检测并创建地方坦克
-	if hero_tank_life < 0:
-		hero_tank_life = 0
+	_create_enemy_tank_if_neccessary() # 检测并创建地方坦克
 	$SideBarContainer/Player1/NumberNode.set_number(hero_tank_life)
 	$SideBarContainer/StageLevelFlag/NumberNode.set_number(stage_level + 1)
 
@@ -118,7 +133,7 @@ func _draw() -> void:
 
 ## 绘制关卡地址
 func _draw_stage_map():
-	var stage_level_map:Array = StageLevel.WarMaps[stage_level]
+	var stage_level_map: Array = StageLevel.WarMaps[stage_level]
 	for y in stage_level_map.size():
 		for x in stage_level_map[y].size():
 			var pos_x = x * Constants.WarMapTiledSize
@@ -127,23 +142,23 @@ func _draw_stage_map():
 			var tiled_type = MapTiledType.get_tiled_type(value)
 			var tiled_node: MapTiledNode = _tiled_prefab.instantiate()
 			tiled_node.tiled_type = tiled_type
-			tiled_node.position = Vector2(pos_x + Constants.WarMapTiledSize/2.0,\
-				pos_y + Constants.WarMapTiledSize/2.0)
+			tiled_node.position = Vector2(pos_x + Constants.WarMapTiledSize / 2.0, \
+				pos_y + Constants.WarMapTiledSize / 2.0)
 			if tiled_type == MapTiledType.GRASS:
 				$GrassMap.add_child(tiled_node)
 				continue
-			var master_x = Constants.WarMapTiledCount/2-2
-			var master_y = Constants.WarMapTiledCount-3
-			if x >= master_x and x <= master_x + 3 \
-				and y >= master_y and y <= master_y + 3:
-					if x >= master_x+1 and x <= master_x+2 \
-						and y >= master_y+1 and y <= master_y+2:
+			var master_py = Constants.WarMapTiledCount - 3
+			var master_px = int(float(Constants.WarMapTiledCount) / 2) - 2
+			if x >= master_px and x <= master_px + 3 \
+				and y >= master_py and y <= master_py + 3:
+					if x >= master_px + 1 and x <= master_px + 2 \
+						and y >= master_py + 1 and y <= master_py + 2:
 							continue
 					# tiled.tiled_type = MapTiledType.GRID
 					_master_grid_nodes.append(tiled_node) # 添加基地节点
 			$WarRootMap.add_child(tiled_node) # 地砖添加到战场地图
 	# 绘制玩家坦克基地
-	var master_x = Constants.WarMapSize/2.0
+	var master_x = Constants.WarMapSize / 2.0
 	var master_y = Constants.WarMapSize - Constants.WarMapTiledSize
 	_player_master.position = Vector2(master_x, master_y)
 	$WarRootMap.add_child(_player_master)
@@ -154,8 +169,8 @@ func _draw_stage_map():
 func _show_master_grid_nodes():
 	var offset_x = Constants.WarMapTiledSize
 	var offset_y = Constants.WarMapTiledSize
-	var start_offset = Vector2(Constants.WarMapSize/2.0-2.5 * Constants.WarMapTiledSize,
-		Constants.WarMapSize-3.5 * Constants.WarMapTiledSize) + Vector2(offset_x, offset_y)
+	var start_offset = Vector2(Constants.WarMapSize / 2.0 - 2.5 * Constants.WarMapTiledSize,
+		Constants.WarMapSize - 3.5 * Constants.WarMapTiledSize) + Vector2(offset_x, offset_y)
 	for node in _master_grid_nodes:
 		node.set_tiled_type(MapTiledType.GRID)
 		print(node.position)
@@ -170,12 +185,12 @@ func _show_strong_prop():
 	_tank_strong_prop = _tank_prop_prefab.instantiate()
 	_tank_strong_prop.prop_type = prop_type
 	_tank_strong_prop.position = Vector2(
-		randi_range(Constants.WarMapTiledSize,\
+		randi_range(Constants.WarMapTiledSize, \
 			Constants.WarMapSize - Constants.WarMapTiledSize),
-		randi_range(Constants.WarMapTiledSize,\
+		randi_range(Constants.WarMapTiledSize, \
 			Constants.WarMapSize - Constants.WarMapTiledSize))
 	if prop_type == PropNode.TYPE_TANK:
-		$AudioManager.play_prop() #播放坦克加人的道具音效
+		$AudioManager.play_prop() # 播放坦克加人的道具音效
 	$PropMap.add_child(_tank_strong_prop) # 添加道具地图
 
 ## 隐藏道具节点
@@ -186,13 +201,15 @@ func _dismiss_strong_prop():
 
 ## 创建英雄坦克
 func _create_hero_tank():
-	if hero_tank_life > 1:
+	if hero_tank_life >= 1:
 		hero_tank_life -= 1
 	if hero_tank_life == 0:
-		print('游戏结束，玩家没有生命数了')
-		return
+		self._show_game_over_animation()
+		return # 玩家没有生命，直接结束游戏
 	hero_tank = TankCreator.create_hero_tank()
 	$TankLayer.add_child(hero_tank);
+	if game_state == GAME_STATE_OVER and hero_tank:
+		hero_tank.allow_move = false # 游戏结束，坦克无法移动
 
 ## 通过定时器添加敌方坦克
 func _create_enemy_tank_if_neccessary():
@@ -207,7 +224,7 @@ func _create_enemy_tank_if_neccessary():
 	var diff_count = abs(enemy_war_count - total_enemy_count)
 	var locations = [TankCreator.CREATE_LCOATION_CENTER, TankCreator.CREATE_LOCATION_LEFT, TankCreator.CREATE_LOCATION_RIGHT]
 	var locationRects = [
-		Rect2(Constants.WarMapSize/2.0 - Constants.WarMapTiledSize, 0, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
+		Rect2(Constants.WarMapSize / 2.0 - Constants.WarMapTiledSize, 0, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
 		Rect2(0, 0, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
 		Rect2(Constants.WarMapSize - Constants.WarMapTiledBigSize, 0, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
 	]
@@ -231,7 +248,7 @@ func _create_enemy_tank_if_neccessary():
 			var tank = TankCreator.create_enemy_tank(type, target_location)
 			tanks.append(tank) # 需要记录这个新添加的
 			enemy_total_count -= 1 # 每次坦克总数减少1
-			if enemy_total_count % 3 == 0 and\
+			if enemy_total_count % 3 == 0 and \
 				type != TankRoleType.Enemy3:
 				tank.is_red_tank = true # 标记为红坦克
 			$TankLayer.add_child(tank); # 添加创建的坦克到新节点中
@@ -240,3 +257,14 @@ func _create_enemy_tank_if_neccessary():
 func _no_other_tank_in_location(target_rect: Rect2, tank: TankNode) -> bool:
 	var tank_rect = Rect2(tank.position.x, tank.position.y, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize)
 	return not tank_rect.intersects(target_rect, true)
+
+## 显示游戏结束动画
+func _show_game_over_animation():
+	if game_state == GAME_STATE_OVER:
+		return # 游戏已经是结束的状态，直接返回
+	game_state = GAME_STATE_OVER #游戏状态设置为结束
+	$GameOverContainer.visible = true # 游戏结束容器变得可见
+	var tween = get_tree().create_tween()
+	tween.tween_property($GameOverContainer/GameOverPic, "position:y", \
+		Constants.WarMapSize/2.0-Constants.WarMapTiledSize, 1.2)
+	if hero_tank: hero_tank.allow_move = false # 游戏结束，坦克无法移动

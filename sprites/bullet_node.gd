@@ -84,6 +84,7 @@ func _handle_collision_with(collider: Object) -> void:
 		elif parent is MasterNode: # 如果是玩家基地节点
 			_show_bomb_effect() # 显示爆炸效果
 			(parent as MasterNode).set_dead_state()
+			$AudioManager.play_tank_crack() # 播放爆炸声音
 			GlobalEventBus.emit_signal(&'master_damaged')
 	elif collider is CharacterBody2D: # 一般为坦克或者其他子弹
 		if collider is TankNode:

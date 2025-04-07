@@ -38,6 +38,9 @@ var is_red_tank: bool = false
 ## 上次发射子弹的时间
 var _shoot_time: float = 0.0
 
+## 是否运行移动
+var allow_move: bool = true
+
 ## 保护模式的持续时间，一般为15s
 var protect_hold_time: float = 0.0
 
@@ -69,10 +72,10 @@ func _ready() -> void:
 
 ## 初始化
 func _initialize():
-	if role != TankRoleType.Hero:
-		if role == TankRoleType.Enemy3:
+	if role != TankRoleType.Hero: # 如果是敌方坦克
+		if role == TankRoleType.Enemy3: # 如果是第三类敌机坦克
 			hits_of_received = 3 # 如果是Enemy3，抗击打能力设置为3
-		_add_auto_move_timer()
+		_add_auto_move_timer() # 添加自动移动的定时器逻辑
 		self.collision_layer = CollisionLayer.EnemyTank
 		self.collision_mask &= ~CollisionLayer.EnemyTank
 		self.collision_mask &= ~CollisionLayer.EnemyBullet
@@ -89,6 +92,7 @@ func _initialize():
 
 ## 处理每帧的事件
 func _process(delta: float) -> void:
+	if not allow_move: return # 不允许移动及发射
 	if current_state == TankState.STRONG:
 		protect_hold_time += delta
 		if protect_hold_time > 15.0: # 如果是无敌模式，就持续15s，15s后就还原状态

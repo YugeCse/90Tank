@@ -9,7 +9,7 @@ const WarMapTiledSize = 16
 const WarMapTiledBigSize = 32
 
 ## 战场地图地砖数量
-const WarMapTiledCount = 26
+const WarMapTiledCount: int = 26
 
 ## 战场地图的大小
 const WarMapSize = WarMapTiledCount * WarMapTiledSize
