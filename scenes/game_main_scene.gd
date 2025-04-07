@@ -124,8 +124,8 @@ func _bind_event_bus():
 @warning_ignore('unused_parameter')
 func _process(delta: float) -> void:
 	_create_enemy_tank_if_neccessary() # 检测并创建地方坦克
-	$SideBarContainer/Player1/NumberNode.set_number(hero_tank_life)
 	$SideBarContainer/StageLevelFlag/NumberNode.set_number(stage_level + 1)
+	$SideBarContainer/Player1/NumberNode.set_number(hero_tank_life if hero_tank_life >= 0 else 0)
 
 func _draw() -> void:
 	draw_rect(_viewport_rect, Color(127, 127, 127, 255))
@@ -201,9 +201,9 @@ func _dismiss_strong_prop():
 
 ## 创建英雄坦克
 func _create_hero_tank():
-	if hero_tank_life >= 1:
+	if hero_tank_life >= 0:
 		hero_tank_life -= 1
-	if hero_tank_life == 0:
+	if hero_tank_life < 0:
 		self._show_game_over_animation()
 		return # 玩家没有生命，直接结束游戏
 	hero_tank = TankCreator.create_hero_tank()
