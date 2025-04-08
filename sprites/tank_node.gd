@@ -76,13 +76,13 @@ func _initialize():
 		if role == TankRoleType.Enemy3: # 如果是第三类敌机坦克
 			hits_of_received = 3 # 如果是Enemy3，抗击打能力设置为3
 		_add_auto_move_timer() # 添加自动移动的定时器逻辑
-		self.collision_layer = CollisionLayer.EnemyTank
+		self.collision_layer &= ~CollisionLayer.HeroTank
 		self.collision_mask &= ~CollisionLayer.EnemyTank
 		self.collision_mask &= ~CollisionLayer.EnemyBullet
 		if is_red_tank: # 如果是红色坦克
 			self._start_blink() # 是红坦克，就开始闪烁
 	else:
-		self.collision_layer = CollisionLayer.HeroTank
+		self.collision_layer &= ~CollisionLayer.EnemyTank
 		self.collision_mask &= ~CollisionLayer.HeroBullet
 	var tank_sprite_sheet = TankRoleType\
 		.get_role_sprite_sheet(role)
@@ -161,17 +161,20 @@ func change_direction(dir_key: String):
 func _safe_move(delta: float, direction: Vector2):
 	var target_velocity = direction * speed
 	var collider = move_and_collide(target_velocity * delta)
-	if collider: # 如果有发生碰撞，则判断碰撞的是什么内容
-		collider = collider.get_collider()
-		if collider is StaticBody2D: # 如果与静态刚体节点碰撞
-			collider = collider.get_parent()
-			if collider is PropNode: # 如果是道具节点，则执行下面逻辑
-				var prop_type = (collider as PropNode).prop_type
-				if prop_type == PropNode.TYPE_HAT: # 如果保护帽，则显示特效
-					self._append_protected_effect()
-				elif prop_type == PropNode.TYPE_STAR: # 如果是五角星，拾取五角星
-					self.props.append(collider)
-				GlobalEventBus.emit_signal('player_get_prop') # 发送获得道具的通知
+	if collider: _handle_collision_event(collider) # 如果有发生碰撞，则判断碰撞的是什么内容
+
+## 处理碰撞事件
+func _handle_collision_event(collider: Object):
+	var collider_obj = collider.get_collider()
+	if collider_obj is StaticBody2D: # 如果与静态刚体节点碰撞
+		collider_obj = collider_obj.get_parent()
+		if collider_obj is PropNode: # 如果是道具节点，则执行下面逻辑
+			var prop_type = (collider_obj as PropNode).prop_type
+			if prop_type == PropNode.TYPE_HAT: # 如果保护帽，则显示特效
+				self._append_protected_effect()
+			elif prop_type == PropNode.TYPE_STAR: # 如果是五角星，拾取五角星
+				self.props.append(collider_obj)
+			GlobalEventBus.emit_signal('tank_get_prop', self, collider_obj) # 发送获得道具的通知
 
 ## 退出树节点事件
 func _exit_tree() -> void:

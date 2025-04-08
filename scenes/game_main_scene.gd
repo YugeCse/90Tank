@@ -109,17 +109,11 @@ func _init_layout():
 
 ## 绑定事件通知
 func _bind_event_bus():
-	GlobalEventBus.player_get_prop \
-		.connect(func(): print('玩家获得道具'); _dismiss_strong_prop())
-	GlobalEventBus.player_damaged \
-		.connect(func(): print('玩家被消灭'); _create_hero_tank())
-	GlobalEventBus.enemy_damaged \
-		.connect(func(tank): \
-			print('敌人被消灭： ', tank); \
-			enemy_total_count -= 1)
-	GlobalEventBus.master_damaged \
-		.connect(func(): print('总部被摧毁'); _show_game_over_animation())
-	GlobalEventBus.show_strong_prop.connect(func(): _show_strong_prop())
+	GlobalEventBus.tank_get_prop.connect(_tank_get_prop)
+	GlobalEventBus.player_damaged.connect(_player_damaged)
+	GlobalEventBus.enemy_damaged.connect(_enemy_damaged)
+	GlobalEventBus.master_damaged.connect(_player_master_damaged)
+	GlobalEventBus.show_strong_prop.connect(_show_player_prop)
 
 @warning_ignore('unused_parameter')
 func _process(delta: float) -> void:
@@ -178,9 +172,33 @@ func _show_master_grid_nodes():
 			continue
 		$WarRootMap.add_child(node)
 
-## 显示加强道具
-func _show_strong_prop():
-	self._dismiss_strong_prop()
+## 敌人被消灭
+func _enemy_damaged(tank: TankNode):
+	print('敌人被消灭： ', tank)
+	enemy_total_count -= 1
+
+## 玩家被消灭
+func _player_damaged():
+	print('玩家被消灭')
+	_create_hero_tank()
+
+## 玩家基地被摧毁
+func _player_master_damaged():
+	print('总部被摧毁')
+	_show_game_over_animation()
+
+# 坦克获得道具
+func _tank_get_prop(tank: TankNode, prop: PropNode):
+	_dismiss_player_prop() # 让当前的道具消失
+	if tank.role == TankRoleType.Hero and\
+		prop.prop_type == PropNode.TYPE_TANK:
+		hero_tank_life += 1 # 玩家生命+1
+		$AudioManager.play_prop() # 播放坦克加人的音乐
+	pass
+
+## 显示玩家道具
+func _show_player_prop():
+	self._dismiss_player_prop()
 	var prop_type = PropNode.TYPE_HAT
 	_tank_strong_prop = _tank_prop_prefab.instantiate()
 	_tank_strong_prop.prop_type = prop_type
@@ -193,8 +211,8 @@ func _show_strong_prop():
 		$AudioManager.play_prop() # 播放坦克加人的道具音效
 	$PropMap.add_child(_tank_strong_prop) # 添加道具地图
 
-## 隐藏道具节点
-func _dismiss_strong_prop():
+## 隐藏玩家道具节点
+func _dismiss_player_prop():
 	if _tank_strong_prop:
 		_tank_strong_prop.free()
 	_tank_strong_prop = null
