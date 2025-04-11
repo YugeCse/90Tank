@@ -29,8 +29,8 @@ var current_direction := Vector2.DOWN
 ## 当前的坦克状态
 var current_state = TankState.BORN
 
-## 坦克道具库
-var props: Array[PropNode] = []
+## 坦克道具库-星星的数量
+var star_count: int = 0
 
 ## 是否是红坦克
 var is_red_tank: bool = false
@@ -168,13 +168,15 @@ func _handle_collision_event(collider: Object):
 	var collider_obj = collider.get_collider()
 	if collider_obj is StaticBody2D: # 如果与静态刚体节点碰撞
 		collider_obj = collider_obj.get_parent()
-		if collider_obj is PropNode: # 如果是道具节点，则执行下面逻辑
+		if collider_obj is PropNode and \
+			role == TankRoleType.Hero: # 如果是道具节点，则执行下面逻辑
 			var prop_type = (collider_obj as PropNode).prop_type
 			if prop_type == PropNode.TYPE_HAT: # 如果保护帽，则显示特效
 				self._append_protected_effect()
 			elif prop_type == PropNode.TYPE_STAR: # 如果是五角星，拾取五角星
-				self.props.append(collider_obj)
-			GlobalEventBus.emit_signal('tank_get_prop', self, collider_obj) # 发送获得道具的通知
+				self.star_count += 1 # 星星数量增加1
+			print('碰撞对象是：', typeof(collider_obj))
+			GlobalEventBus.emit_signal(&'tank_get_prop', self, prop_type) # 发送获得道具的通知
 
 ## 退出树节点事件
 func _exit_tree() -> void:
@@ -224,7 +226,7 @@ func hurt():
 	if is_red_tank: # 如果是红坦克，需要展示道具
 		is_red_tank = false # 设置红色坦克属性取消
 		self._stop_blink() # 停止红坦克闪烁
-		GlobalEventBus.emit_signal('show_strong_prop')
+		GlobalEventBus.emit_signal(&'show_strong_prop')
 		return
 	hits_of_received -= 1 # 抗击打能力每次减少1
 	if hits_of_received <= 0: # 为0时坦克爆炸

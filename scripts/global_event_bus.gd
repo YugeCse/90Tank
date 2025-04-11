@@ -8,4 +8,4 @@ signal enemy_damaged(TankNode)
 ## 显示加强道具
 signal show_strong_prop()
 ## 坦克获得道具
-signal tank_get_prop(tank: TankNode, prop: PropNode)
+signal tank_get_prop(tank: TankNode, prop_type: int)

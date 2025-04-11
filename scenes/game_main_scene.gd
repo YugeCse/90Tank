@@ -95,7 +95,7 @@ func _init_layout():
 	# 游戏结束的显示图层
 	$GameOverContainer.position = $WarRootMap.position
 	$GameOverContainer/GameOverPic.position = Vector2(\
-		Constants.WarMapSize/2.0-$GameOverContainer/GameOverPic.get_rect().size.x/2.0,\
+		Constants.WarMapSize / 2.0 - $GameOverContainer/GameOverPic.get_rect().size.x / 2.0, \
 		Constants.WarMapSize + Constants.WarMapTiledSize)
 
 	self._draw_stage_map() # 绘制游戏地图图层
@@ -161,10 +161,6 @@ func _draw_stage_map():
 
 ## 构建金砖节点，放置在玩家基地
 func _show_master_grid_nodes():
-	var offset_x = Constants.WarMapTiledSize
-	var offset_y = Constants.WarMapTiledSize
-	var start_offset = Vector2(Constants.WarMapSize / 2.0 - 2.5 * Constants.WarMapTiledSize,
-		Constants.WarMapSize - 3.5 * Constants.WarMapTiledSize) + Vector2(offset_x, offset_y)
 	for node in _master_grid_nodes:
 		node.set_tiled_type(MapTiledType.GRID)
 		print(node.position)
@@ -188,18 +184,17 @@ func _player_master_damaged():
 	_show_game_over_animation()
 
 # 坦克获得道具
-func _tank_get_prop(tank: TankNode, prop: PropNode):
-	_dismiss_player_prop() # 让当前的道具消失
-	if tank.role == TankRoleType.Hero and\
-		prop.prop_type == PropNode.TYPE_TANK:
+func _tank_get_prop(tank: TankNode, prop_type: int):
+	if tank.role == TankRoleType.Hero and \
+		prop_type == PropNode.TYPE_TANK:
 		hero_tank_life += 1 # 玩家生命+1
 		$AudioManager.play_prop() # 播放坦克加人的音乐
-	pass
+	_dismiss_player_prop() # 让当前的道具消失
 
 ## 显示玩家道具
 func _show_player_prop():
 	self._dismiss_player_prop()
-	var prop_type = PropNode.TYPE_HAT
+	var prop_type = PropNode.TYPE_TANK
 	_tank_strong_prop = _tank_prop_prefab.instantiate()
 	_tank_strong_prop.prop_type = prop_type
 	_tank_strong_prop.position = Vector2(
@@ -207,8 +202,6 @@ func _show_player_prop():
 			Constants.WarMapSize - Constants.WarMapTiledSize),
 		randi_range(Constants.WarMapTiledSize, \
 			Constants.WarMapSize - Constants.WarMapTiledSize))
-	if prop_type == PropNode.TYPE_TANK:
-		$AudioManager.play_prop() # 播放坦克加人的道具音效
 	$PropMap.add_child(_tank_strong_prop) # 添加道具地图
 
 ## 隐藏玩家道具节点
@@ -280,9 +273,9 @@ func _no_other_tank_in_location(target_rect: Rect2, tank: TankNode) -> bool:
 func _show_game_over_animation():
 	if game_state == GAME_STATE_OVER:
 		return # 游戏已经是结束的状态，直接返回
-	game_state = GAME_STATE_OVER #游戏状态设置为结束
+	game_state = GAME_STATE_OVER # 游戏状态设置为结束
 	$GameOverContainer.visible = true # 游戏结束容器变得可见
 	var tween = get_tree().create_tween()
 	tween.tween_property($GameOverContainer/GameOverPic, "position:y", \
-		Constants.WarMapSize/2.0-Constants.WarMapTiledSize, 1.2)
+		Constants.WarMapSize / 2.0 - Constants.WarMapTiledSize, 1.2)
 	if hero_tank: hero_tank.allow_move = false # 游戏结束，坦克无法移动
