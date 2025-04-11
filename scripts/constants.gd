@@ -14,6 +14,9 @@ const WarMapTiledCount: int = 26
 ## 战场地图的大小
 const WarMapSize = WarMapTiledCount * WarMapTiledSize
 
+## 玩家基地被保护的限制时间
+const PLAYER_MASTER_PROTECT_LIMIT_TIME = 20
+
 ## 方向枚举
 enum Direction {
 	UP = 1,

@@ -176,7 +176,7 @@ func _handle_collision_event(collider: Object):
 			elif prop_type == PropNode.TYPE_STAR: # 如果是五角星，拾取五角星
 				self.star_count += 1 # 星星数量增加1
 			print('碰撞对象是：', typeof(collider_obj))
-			GlobalEventBus.emit_signal(&'tank_get_prop', self, prop_type) # 发送获得道具的通知
+			GlobalEventBus.apply_tank_get_prop(self, prop_type) # 发送获得道具的通知
 
 ## 退出树节点事件
 func _exit_tree() -> void:
@@ -226,7 +226,7 @@ func hurt():
 	if is_red_tank: # 如果是红坦克，需要展示道具
 		is_red_tank = false # 设置红色坦克属性取消
 		self._stop_blink() # 停止红坦克闪烁
-		GlobalEventBus.emit_signal(&'show_strong_prop')
+		GlobalEventBus.apply_show_strong_prop() # 显示加强道具
 		return
 	hits_of_received -= 1 # 抗击打能力每次减少1
 	if hits_of_received <= 0: # 为0时坦克爆炸
@@ -307,4 +307,5 @@ func _start_blink():
 
 # 停止闪烁
 func _stop_blink():
-	_red_tank_blink_tween.kill()
+	_red_tank_blink_tween.kill() # 停止闪烁
+	$TankSprite.set_deferred(&'modulate', Color(1, 1, 1, 1)) # 设置颜色还原

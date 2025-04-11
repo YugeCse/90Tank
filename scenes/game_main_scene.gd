@@ -1,3 +1,4 @@
+## 游戏主场景
 class_name GameMainScene
 extends CanvasItem
 
@@ -43,6 +44,18 @@ var hero_win_score: int = 0
 
 ## 坦克加强道具
 var _tank_strong_prop: PropNode
+
+## 玩家基地是否被保护起来了，默认：false
+var _master_protected: bool = false
+
+## 玩家基地被保护了的时长，默认：0
+var _master_protected_time: float = 0
+
+## 临时标记玩家基地变化的时间
+var _tmp_map_tiled_change_time: float = 0
+
+## 临时的地砖类型标记字段
+var _tmp_map_tiled_type: int = MapTiledType.WALL
 
 ## 基地金砖节点，玩家拾取铁锹道具时拥有
 var _master_grid_nodes: Array[MapTiledNode] = []
@@ -117,9 +130,29 @@ func _bind_event_bus():
 
 @warning_ignore('unused_parameter')
 func _process(delta: float) -> void:
+	_handle_master_state(delta) # 处理玩家总部状态
 	_create_enemy_tank_if_neccessary() # 检测并创建地方坦克
 	$SideBarContainer/StageLevelFlag/NumberNode.set_number(stage_level + 1)
 	$SideBarContainer/Player1/NumberNode.set_number(hero_tank_life if hero_tank_life >= 0 else 0)
+
+# 处理玩家总部状态
+func _handle_master_state(delta: float)->void:
+	if not _master_protected: return # 如果基地属于被保护状态，那么会执行下面的逻辑
+	_master_protected_time += delta # 累积计算被保护的时长
+	if _master_protected_time >= Constants.PLAYER_MASTER_PROTECT_LIMIT_TIME:
+		_master_protected = false
+		_master_protected_time = 0
+		_tmp_map_tiled_change_time = 0
+		_show_master_protect_nodes(MapTiledType.WALL)
+	elif _master_protected_time >= Constants.PLAYER_MASTER_PROTECT_LIMIT_TIME - 5:
+		_tmp_map_tiled_change_time += delta
+		if _tmp_map_tiled_change_time > 0.3:
+			if _tmp_map_tiled_type == MapTiledType.GRID:
+				_tmp_map_tiled_type = MapTiledType.WALL
+			else:
+				_tmp_map_tiled_type = MapTiledType.GRID
+			_tmp_map_tiled_change_time = 0.0
+		_show_master_protect_nodes(_tmp_map_tiled_type)
 
 func _draw() -> void:
 	draw_rect(_viewport_rect, Color(127, 127, 127, 255))
@@ -155,15 +188,13 @@ func _draw_stage_map():
 	var master_x = Constants.WarMapSize / 2.0
 	var master_y = Constants.WarMapSize - Constants.WarMapTiledSize
 	_player_master.position = Vector2(master_x, master_y)
-	$WarRootMap.add_child(_player_master)
-
-	# self._show_master_grid_nodes() # 构建金砖节点，放置在玩家地址位置
+	$WarRootMap.add_child(_player_master) # 地图添加玩家基地节点
 
 ## 构建金砖节点，放置在玩家基地
-func _show_master_grid_nodes():
+## <pre>type - 节点类型</pre>
+func _show_master_protect_nodes(type: int):
 	for node in _master_grid_nodes:
-		node.set_tiled_type(MapTiledType.GRID)
-		print(node.position)
+		node.set_tiled_type(type)
 		if node.get_parent():
 			continue
 		$WarRootMap.add_child(node)
@@ -171,17 +202,20 @@ func _show_master_grid_nodes():
 ## 敌人被消灭
 func _enemy_damaged(tank: TankNode):
 	print('敌人被消灭： ', tank)
-	enemy_total_count -= 1
+	if enemy_total_count == 0:
+		print('敌人已经被完全消灭！')
+		return # 敌人已经被完全消灭
+	enemy_total_count -= 1 # 敌人数量减少1
 
 ## 玩家被消灭
 func _player_damaged():
-	print('玩家被消灭')
-	_create_hero_tank()
+	print('玩家被消灭！')
+	_create_hero_tank() # 创建新的玩家
 
 ## 玩家基地被摧毁
 func _player_master_damaged():
-	print('总部被摧毁')
-	_show_game_over_animation()
+	print('玩家总部被摧毁！')
+	_show_game_over_animation() # 显示游戏结束的动画
 
 # 坦克获得道具
 func _tank_get_prop(tank: TankNode, prop_type: int):
@@ -189,12 +223,19 @@ func _tank_get_prop(tank: TankNode, prop_type: int):
 		prop_type == PropNode.TYPE_TANK:
 		hero_tank_life += 1 # 玩家生命+1
 		$AudioManager.play_prop() # 播放坦克加人的音乐
+	elif prop_type == PropNode.TYPE_MASTER: # 如果坦克敌机加固
+		_master_protected = true # 标记总部被保护
+		_master_protected_time = 0 # 标记总部被保护的时长
+		_tmp_map_tiled_change_time = 0
+		_tmp_map_tiled_type = MapTiledType.GRID
+		_show_master_protect_nodes(MapTiledType.GRID) # 加固玩家基地
+		pass
 	_dismiss_player_prop() # 让当前的道具消失
 
 ## 显示玩家道具
 func _show_player_prop():
 	self._dismiss_player_prop()
-	var prop_type = PropNode.TYPE_TANK
+	var prop_type = PropNode.TYPE_MASTER
 	_tank_strong_prop = _tank_prop_prefab.instantiate()
 	_tank_strong_prop.prop_type = prop_type
 	_tank_strong_prop.position = Vector2(
