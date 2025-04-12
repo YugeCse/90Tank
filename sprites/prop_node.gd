@@ -69,6 +69,9 @@ func _stop_blink():
 func _exit_tree() -> void:
 	self._stop_blink()
 
-### 显示分数，然后消失
-#func show_score_then_dismiss():
-	#self._stop_blink()
+## 显示分数然后注销
+func show_score_then_dispose():
+	$StaticBody2D/CollisionShape2D.set_deferred('disabled', true)
+	self.texture = load('res://assets/images/score_%d.png' % [prop_score])
+	await get_tree().create_timer(1.0).timeout
+	queue_free() # 从树节点中删除

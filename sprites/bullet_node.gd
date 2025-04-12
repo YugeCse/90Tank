@@ -78,7 +78,7 @@ func _handle_collision_with(collider: Object) -> void:
 			match map_tiled_node.body.collision_layer:
 				CollisionLayer.Wall:
 					_show_bomb_effect() # 显示爆炸效果
-					collider.get_parent().queue_free() # 碰撞到墙壁，墙壁直接销毁
+					map_tiled_node.queue_free() # 碰撞到墙壁，墙壁直接销毁
 				CollisionLayer.Grid:
 					_show_bomb_effect() # 显示爆炸效果
 		elif parent is MasterNode: # 如果是玩家基地节点

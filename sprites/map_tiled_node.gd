@@ -26,13 +26,10 @@ func set_tiled_type(type: int):
 		remove_child($TiledStaticBody)
 		self.texture = _get_tiled_atlas(tiled_sheet, type)
 		return
-	if (!body.is_in_group("map_tiled")):
-		body.add_to_group("map_tiled")
 	self.texture = _get_tiled_atlas(tiled_sheet, type)
-	if type == MapTiledType.ICE or \
-		type == MapTiledType.RIVER:
-		body.collision_mask = CollisionLayer.HeroTank | \
-			CollisionLayer.EnemyTank
+	if not body: return # 如果body为空时，不能设置下面的数据
+	if type == MapTiledType.ICE or type == MapTiledType.RIVER:
+		body.collision_mask = CollisionLayer.HeroTank | CollisionLayer.EnemyTank
 	body.collision_layer = MapTiledType.get_tiled_collision_layer(type)
 
 ## 获取地图帧

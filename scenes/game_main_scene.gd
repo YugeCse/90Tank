@@ -57,8 +57,8 @@ var _tmp_map_tiled_change_time: float = 0
 ## 临时的地砖类型标记字段
 var _tmp_map_tiled_type: int = MapTiledType.WALL
 
-## 基地金砖节点，玩家拾取铁锹道具时拥有
-var _master_grid_nodes: Array[MapTiledNode] = []
+## 基地金砖节点，玩家拾取铁锹道具时拥有, 存储格式：x,y = MapTiledNode
+var _master_grid_nodes: Dictionary[String, MapTiledNode] = {}
 
 ## 地图地砖的预制体
 @onready
@@ -182,7 +182,8 @@ func _draw_stage_map():
 						and y >= master_py + 1 and y <= master_py + 2:
 							continue
 					# tiled.tiled_type = MapTiledType.GRID
-					_master_grid_nodes.append(tiled_node) # 添加基地节点
+					_master_grid_nodes.set('%f-%f' % [tiled_node.position.x, \
+						tiled_node.position.y], tiled_node) # 添加基地节点
 			$WarRootMap.add_child(tiled_node) # 地砖添加到战场地图
 	# 绘制玩家坦克基地
 	var master_x = Constants.WarMapSize / 2.0
@@ -193,8 +194,18 @@ func _draw_stage_map():
 ## 构建金砖节点，放置在玩家基地
 ## <pre>type - 节点类型</pre>
 func _show_master_protect_nodes(type: int):
-	for node in _master_grid_nodes:
-		node.set_tiled_type(type)
+	for key in _master_grid_nodes:
+		var node = _master_grid_nodes[key]
+		if not node or not node.body:
+			if node:
+				node.queue_free()
+			var position = Array(key.split('-'));
+			node = _tiled_prefab.instantiate() as MapTiledNode
+			node.set_tiled_type(type)
+			node.position = Vector2(float(position[0]), float(position[1]))
+			_master_grid_nodes.set(key, node) # 重新设置key-value信息
+		else:
+			node.set_tiled_type(type)
 		if node.get_parent():
 			continue
 		$WarRootMap.add_child(node)
@@ -229,8 +240,8 @@ func _tank_get_prop(tank: TankNode, prop_type: int):
 		_tmp_map_tiled_change_time = 0
 		_tmp_map_tiled_type = MapTiledType.GRID
 		_show_master_protect_nodes(MapTiledType.GRID) # 加固玩家基地
-		pass
-	_dismiss_player_prop() # 让当前的道具消失
+	if _tank_strong_prop: # 如果道具对象存在
+		_tank_strong_prop.show_score_then_dispose() # 显示道具分数然后注销
 
 ## 显示玩家道具
 func _show_player_prop():
