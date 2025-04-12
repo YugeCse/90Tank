@@ -32,8 +32,8 @@ var current_state = TankState.BORN
 ## 坦克道具库-星星的数量
 var star_count: int = 0
 
-## 是否是红坦克
-var is_red_tank: bool = false
+## 红坦克展示次数，默认： 0
+var red_tank_count: int = 0
 
 ## 上次发射子弹的时间
 var _shoot_time: float = 0.0
@@ -79,7 +79,7 @@ func _initialize():
 		self.collision_layer &= ~CollisionLayer.HeroTank
 		self.collision_mask &= ~CollisionLayer.EnemyTank
 		self.collision_mask &= ~CollisionLayer.EnemyBullet
-		if is_red_tank: # 如果是红色坦克
+		if red_tank_count > 0: # 如果是红色坦克
 			self._start_blink() # 是红坦克，就开始闪烁
 	else:
 		self.collision_layer &= ~CollisionLayer.EnemyTank
@@ -223,9 +223,11 @@ func hurt():
 	if current_state == TankState.STRONG:
 		# 坦克处于无敌模式，无法被攻击
 		return
-	if is_red_tank: # 如果是红坦克，需要展示道具
-		is_red_tank = false # 设置红色坦克属性取消
-		self._stop_blink() # 停止红坦克闪烁
+	if red_tank_count > 0: # 如果是红坦克，需要展示道具
+		red_tank_count -= 1 # 设置红色坦克属性取消
+		if red_tank_count <= 0:
+			red_tank_count = 0 # 标记红色坦克还原
+			self._stop_blink() # 停止红坦克闪烁
 		GlobalEventBus.apply_show_strong_prop() # 显示加强道具
 		return
 	hits_of_received -= 1 # 抗击打能力每次减少1

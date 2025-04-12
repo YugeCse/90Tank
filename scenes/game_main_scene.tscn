@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://831xnm84ycoi"]
+[gd_scene load_steps=13 format=3 uid="uid://831xnm84ycoi"]
 
 [ext_resource type="Script" uid="uid://ddbr8j0fm3lhu" path="res://scenes/game_main_scene.gd" id="1_cqh8l"]
 [ext_resource type="Script" uid="uid://b5su4eug3qic6" path="res://scripts/audio_manager.gd" id="2_jjcd7"]
@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://bbmn5euxagpo2" path="res://assets/images/player_2.png" id="6_gd5mj"]
 [ext_resource type="Texture2D" uid="uid://7vx6aitfvb6q" path="res://assets/images/stage_flag.png" id="7_18dyl"]
 [ext_resource type="Texture2D" uid="uid://cfctqvp6wndca" path="res://assets/images/game_over.png" id="8_gd5mj"]
+[ext_resource type="Script" uid="uid://buf76tqkrru06" path="res://scripts/prop_creator.gd" id="9_18dyl"]
 
 [sub_resource type="Animation" id="Animation_6mcyx"]
 length = 0.001
@@ -161,7 +162,7 @@ offset_right = 852.0
 offset_bottom = 592.0
 theme_override_constants/separation = 40
 
-[node name="GridContainer" type="GridContainer" parent="SideBarContainer"]
+[node name="EnemyCounterContainer" type="GridContainer" parent="SideBarContainer"]
 custom_minimum_size = Vector2(28, 140)
 layout_mode = 2
 columns = 2
@@ -316,3 +317,7 @@ offset_bottom = 256.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("8_gd5mj")
+
+[node name="PropCreator" type="Node" parent="."]
+script = ExtResource("9_18dyl")
+metadata/_custom_type_script = "uid://buf76tqkrru06"

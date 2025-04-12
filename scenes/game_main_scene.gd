@@ -22,28 +22,25 @@ var game_state: int = GAME_STATE_START
 
 ## 关卡数
 @export
-var stage_level: int = 4
+var stage_level: int = 10
 
-## 英雄坦克声明数
+## 英雄坦克生命数目：3
 @export
 var hero_tank_life: int = 3
 
 ## 英雄坦克
 var hero_tank: TankNode
 
-### 敌人总数
+### 敌人总数, 数值：20
 @export
 var enemy_total_count: int = 20
 
-### 敌人参战数
+## 敌人参战数，数值：5
 @export
 var enemy_war_count: int = 5
 
-## 玩机得分
+## 玩家得分，默认：0
 var hero_win_score: int = 0
-
-## 坦克加强道具
-var _tank_strong_prop: PropNode
 
 ## 玩家基地是否被保护起来了，默认：false
 var _master_protected: bool = false
@@ -64,13 +61,13 @@ var _master_grid_nodes: Dictionary[String, MapTiledNode] = {}
 @onready
 var _tiled_prefab = preload("res://sprites/map_tiled_node.scn")
 
-## 坦克道具预制体
-@onready
-var _tank_prop_prefab = preload('res://sprites/prop_node.tscn')
-
 ## 玩家基地对象
 @onready
 var _player_master = preload("res://sprites/master_node.scn").instantiate()
+
+## 敌人计数容器
+@onready
+var _enemy_counter_container: GridContainer = $SideBarContainer/EnemyCounterContainer
 
 func _ready() -> void:
 	set_process(true)
@@ -91,6 +88,14 @@ func _init_layout():
 		Constants.WarMapSize, Constants.WarMapSize)
 	# 调整侧边栏的位置
 	$SideBarContainer.position = Vector2(_war_map_rect.end.x + 2.0, war_offset_y)
+	# 设置侧边栏敌人计数
+	for index in range(enemy_total_count):
+		var tex_rect = TextureRect.new()
+		tex_rect.size = Vector2(14, 14)
+		tex_rect.texture = load("res://assets/images/enemy_tank_tag.png")  # 设置纹理
+		#tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		#tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_enemy_counter_container.add_child(tex_rect)
 	# 修改关卡幕布位置
 	var stage_curtain_size = $StageCurtain.size
 	$StageCurtain.position = viewport_size / 2.0 - stage_curtain_size / 2.0
@@ -120,6 +125,13 @@ func _init_layout():
 	$AudioManager.play_game_start() # 播放游戏开始的音效
 	$StageCurtain/AnimationPlayer.play('stage_curtain_slide_up') # 打开游戏关卡幕布
 
+	var create_enemy_timer = Timer.new()
+	create_enemy_timer.wait_time = 1.0
+	create_enemy_timer.one_shot = false
+	create_enemy_timer.connect('timeout', _create_enemy_tank_if_neccessary)
+	create_enemy_timer.autostart = true
+	self.add_child(create_enemy_timer)
+
 ## 绑定事件通知
 func _bind_event_bus():
 	GlobalEventBus.tank_get_prop.connect(_tank_get_prop)
@@ -131,7 +143,6 @@ func _bind_event_bus():
 @warning_ignore('unused_parameter')
 func _process(delta: float) -> void:
 	_handle_master_state(delta) # 处理玩家总部状态
-	_create_enemy_tank_if_neccessary() # 检测并创建地方坦克
 	$SideBarContainer/StageLevelFlag/NumberNode.set_number(stage_level + 1)
 	$SideBarContainer/Player1/NumberNode.set_number(hero_tank_life if hero_tank_life >= 0 else 0)
 
@@ -240,27 +251,11 @@ func _tank_get_prop(tank: TankNode, prop_type: int):
 		_tmp_map_tiled_change_time = 0
 		_tmp_map_tiled_type = MapTiledType.GRID
 		_show_master_protect_nodes(MapTiledType.GRID) # 加固玩家基地
-	if _tank_strong_prop: # 如果道具对象存在
-		_tank_strong_prop.show_score_then_dispose() # 显示道具分数然后注销
+	$PropCreator.dismiss_player_prop() # 隐藏玩家道具
 
 ## 显示玩家道具
 func _show_player_prop():
-	self._dismiss_player_prop()
-	var prop_type = PropNode.TYPE_MASTER
-	_tank_strong_prop = _tank_prop_prefab.instantiate()
-	_tank_strong_prop.prop_type = prop_type
-	_tank_strong_prop.position = Vector2(
-		randi_range(Constants.WarMapTiledSize, \
-			Constants.WarMapSize - Constants.WarMapTiledSize),
-		randi_range(Constants.WarMapTiledSize, \
-			Constants.WarMapSize - Constants.WarMapTiledSize))
-	$PropMap.add_child(_tank_strong_prop) # 添加道具地图
-
-## 隐藏玩家道具节点
-func _dismiss_player_prop():
-	if _tank_strong_prop:
-		_tank_strong_prop.free()
-	_tank_strong_prop = null
+	$PropCreator.show_player_prop($PropMap)
 
 ## 创建英雄坦克
 func _create_hero_tank():
@@ -276,50 +271,65 @@ func _create_hero_tank():
 
 ## 通过定时器添加敌方坦克
 func _create_enemy_tank_if_neccessary():
-	var children = $TankLayer.get_children()
-	var total_enemy_count = 0
+	var total_enemy_count = 0 # 当前渲染界面中敌方坦克的数量
 	var tanks: Array[TankNode] = []
-	for child in children:
-		if child is TankNode:
-			total_enemy_count += 1
-			tanks.append(child as TankNode)
-	if not (total_enemy_count < enemy_war_count && enemy_total_count > 0): return
+	tanks.assign($TankLayer.get_children()\
+		.filter(func(v): return v is TankNode and (v as TankNode).role != TankRoleType.Hero))
+	total_enemy_count = tanks.size() # 战场地方坦克的数量
+	# 当战场上的坦克总数小于等于0或者当战场上的坦克数等于战场上应该显示的坦克数时，就不应该创建新的坦克
+	if enemy_total_count <= 0 or total_enemy_count == enemy_war_count: return
 	var diff_count = abs(enemy_war_count - total_enemy_count)
-	var locations = [TankCreator.CREATE_LCOATION_CENTER, TankCreator.CREATE_LOCATION_LEFT, TankCreator.CREATE_LOCATION_RIGHT]
+	var locations = [TankCreator.CREATE_LCOATION_CENTER, \
+		TankCreator.CREATE_LOCATION_LEFT, \
+		TankCreator.CREATE_LOCATION_RIGHT]
 	var locationRects = [
-		Rect2(Constants.WarMapSize / 2.0 - Constants.WarMapTiledSize, 0, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
+		Rect2(Constants.WarMapSize / 2.0 - Constants.WarMapTiledSize, 0, \
+			Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
 		Rect2(0, 0, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
-		Rect2(Constants.WarMapSize - Constants.WarMapTiledBigSize, 0, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
+		Rect2(Constants.WarMapSize - Constants.WarMapTiledBigSize, 0, \
+			Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
 	]
 	for i in range(0, diff_count):
 		var target_location: int = -100000
 		for index in range(0, locationRects.size()):
 			var rect = locationRects[index]
 			var location = locations[index]
-			if tanks.any(func(item): return _no_other_tank_in_location(rect, item)):
+			if tanks.is_empty() or \
+				tanks.all(func(v): return _no_other_tank_in_location(rect, v)):
 				target_location = location
 				break
-		if target_location != -100000:
-			var rv = randf()
-			var type = TankRoleType.Enemy1
-			if rv < 0.6:
-				type = TankRoleType.Enemy1
-			elif type < 0.8:
-				type = TankRoleType.Enemy2
-			else:
-				type = TankRoleType.Enemy3
-			var tank = TankCreator.create_enemy_tank(type, target_location)
-			tanks.append(tank) # 需要记录这个新添加的
-			enemy_total_count -= 1 # 每次坦克总数减少1
-			if enemy_total_count % 3 == 0 and \
-				type != TankRoleType.Enemy3:
-				tank.is_red_tank = true # 标记为红坦克
-			$TankLayer.add_child(tank); # 添加创建的坦克到新节点中
+		if target_location == -100000: return # 不满足条件，直接返回
+		var rv = randf()
+		var type = TankRoleType.Enemy1
+		if rv < 0.6:
+			type = TankRoleType.Enemy1
+		elif rv < 0.8:
+			type = TankRoleType.Enemy2
+		else:
+			type = TankRoleType.Enemy3
+		var tank = TankCreator.create_enemy_tank(type, target_location)
+		if enemy_total_count % 3 == 0 and \
+			type != TankRoleType.Enemy3:
+			tank.red_tank_count = randi() % 2 + 1 # 标记为红坦克
+		$TankLayer.add_child(tank); # 添加创建的坦克到新节点中
+		tanks.append(tank) # 需要记录这个新添加的
+		remove_enemy_counter_container_last_child() # 移除敌人计数器中最后一个child
 
 ## 判断这个位置是否有其他坦克存在
 func _no_other_tank_in_location(target_rect: Rect2, tank: TankNode) -> bool:
-	var tank_rect = Rect2(tank.position.x, tank.position.y, Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize)
+	var tank_rect = Rect2(tank.position.x, tank.position.y, \
+		Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize)
 	return not tank_rect.intersects(target_rect, true)
+
+## 移除敌人计数器中最后一个child
+func remove_enemy_counter_container_last_child():
+	var children = _enemy_counter_container.get_children()
+	if children.is_empty(): return
+	# 开始删除最后一个child
+	var last_child = children.back()
+	_enemy_counter_container.remove_child(last_child)
+	last_child.queue_free() # 消除最后一个child
+	_enemy_counter_container.queue_redraw() # 重新绘制界面
 
 ## 显示游戏结束动画
 func _show_game_over_animation():
