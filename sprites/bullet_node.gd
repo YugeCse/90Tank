@@ -1,3 +1,4 @@
+## 子弹节点类
 class_name BulletNode
 extends CharacterBody2D
 
@@ -35,7 +36,7 @@ func _ready() -> void:
 		collision_mask &= ~CollisionLayer.EnemyTank
 	# 判断当坦克的方向为0是，则直接销毁子弹
 	if current_direction == Vector2.ZERO:
-		free() # 直接释放对象
+		queue_free() # 释放对象
 		return
 	# 根据方向的不同，设置不同的子弹图片精灵帧
 	if current_direction == Vector2.UP:
