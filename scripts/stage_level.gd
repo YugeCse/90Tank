@@ -2229,3 +2229,28 @@ const WarMaps: Dictionary = {
 		],
 	]
 }
+
+## 获取关卡地图数据
+static func get_stage_map(stage_level: int)->Array:
+	if stage_level < 1:
+		stage_level = 1
+	elif stage_level > StageLevel.WarMaps.size():
+		stage_level = StageLevel.WarMaps.size()
+	return StageLevel.WarMaps[stage_level]
+
+## 获取输入关卡的上一个关卡数
+static func get_next_level(stage_level: int):
+	var len = StageLevel.WarMaps.size()
+	if stage_level + 1 > len - 1:
+		stage_level = 1
+	else:
+		stage_level += 1
+	return stage_level
+
+## 获取输入关卡的下一个关卡数
+static func get_last_stage_level(stage_level: int):
+	if stage_level - 1 < 1:
+		stage_level = StageLevel.WarMaps.size()
+	else:
+		stage_level -= 1
+	return stage_level

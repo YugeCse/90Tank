@@ -3,26 +3,26 @@ class_name GameMainScene
 extends CanvasItem
 
 ## 游戏状态 - 开始
-const GAME_STATE_START = 0
+const GAME_STATE_START = "game_start"
 
 ## 游戏状态 - 暂停
-const GAME_STATE_PAUSE = 1
+const GAME_STATE_PAUSE = "game_pause"
 
 ## 游戏状态 - 结束
-const GAME_STATE_OVER = 2
+const GAME_STATE_OVER = "game_over"
 
-## 视图矩形
+## 游戏视窗矩形
 var _viewport_rect: Rect2
 
 ## 战场矩形
 var _war_map_rect: Rect2
 
 ## 游戏状态
-var game_state: int = GAME_STATE_START
+var game_state: String = GAME_STATE_START
 
 ## 关卡数
 @export
-var stage_level: int = 10
+var stage_level: int = 0
 
 ## 英雄坦克生命数目：3
 @export
@@ -32,8 +32,7 @@ var hero_tank_life: int = 3
 var hero_tank: TankNode
 
 ### 敌人总数, 数值：20
-@export
-var enemy_total_count: int = 20
+var enemy_total_count: int = Constants.ENEMY_TOTAL_COUNT
 
 ## 敌人参战数，数值：5
 @export
@@ -41,6 +40,15 @@ var enemy_war_count: int = 5
 
 ## 玩家得分，默认：0
 var hero_win_score: int = 0
+
+## 敌方坦克的出生数量
+var _enemy_born_count: int = 0
+
+## 玩家定时器道具计时，默认：0
+var _player_prop_timer_time: float = 0
+
+## 玩家定时器是否可用，默认：false
+var _player_prop_timer_enable: bool = false
 
 ## 玩家基地是否被保护起来了，默认：false
 var _master_protected: bool = false
@@ -69,8 +77,9 @@ var _player_master = preload("res://sprites/master_node.scn").instantiate()
 @onready
 var _enemy_counter_container: GridContainer = $SideBarContainer/EnemyCounterContainer
 
+## 准备方法
 func _ready() -> void:
-	set_process(true)
+	self.set_process(true)
 	self._init_layout() # 初始化布局
 	self._bind_event_bus() # 绑定事件通知
 	self._create_hero_tank() # 创建英雄坦克
@@ -78,29 +87,29 @@ func _ready() -> void:
 # 初始化布局
 func _init_layout():
 	# 计算界面要绘制的矩形大小，确定战场边界等内容
-	_viewport_rect = get_viewport() \
-		.get_visible_rect()
+	_viewport_rect = get_viewport().get_visible_rect()
 	var viewport_size = _viewport_rect.size
 	var war_offset_x = viewport_size.x / 2.0 - Constants.WarMapSize / 2.0 \
 		- Constants.WarMapTiledBigSize
 	var war_offset_y = viewport_size.y / 2.0 - Constants.WarMapSize / 2.0
 	_war_map_rect = Rect2(war_offset_x, war_offset_y, \
 		Constants.WarMapSize, Constants.WarMapSize)
+	stage_level = GameData.stage_level # 获取全局的关卡等级
+	$Background.set_size(get_window().size)
 	# 调整侧边栏的位置
 	$SideBarContainer.position = Vector2(_war_map_rect.end.x + 2.0, war_offset_y)
 	# 设置侧边栏敌人计数
 	for index in range(enemy_total_count):
 		var tex_rect = TextureRect.new()
 		tex_rect.size = Vector2(14, 14)
-		tex_rect.texture = load("res://assets/images/enemy_tank_tag.png")  # 设置纹理
-		#tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		#tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex_rect.texture = load("res://assets/images/enemy_tank_tag.png") # 设置纹理
 		_enemy_counter_container.add_child(tex_rect)
 	# 修改关卡幕布位置
 	var stage_curtain_size = $StageCurtain.size
 	$StageCurtain.position = viewport_size / 2.0 - stage_curtain_size / 2.0
 	$StageCurtain/StageLevelContainer.size_flags_vertical = Control.SIZE_EXPAND
 	$StageCurtain/StageLevelContainer.size_flags_horizontal = Control.SIZE_EXPAND
+	$StageCurtain/StageLevelContainer/NumberNode.set_number(stage_level) # 设置关卡等级数据
 	# 修改地图图层位置
 	$WarRootMap.position = Vector2(war_offset_x, war_offset_y)
 	$WarRootMap.set_size(_war_map_rect.size, false)
@@ -113,24 +122,19 @@ func _init_layout():
 	# 游戏结束的显示图层
 	$GameOverContainer.position = $WarRootMap.position
 	$GameOverContainer/GameOverPic.position = Vector2(\
-		Constants.WarMapSize / 2.0 - $GameOverContainer/GameOverPic.get_rect().size.x / 2.0, \
+		Constants.WarMapSize / 2.0 - \
+		$GameOverContainer/GameOverPic.get_rect().size.x / 2.0, \
 		Constants.WarMapSize + Constants.WarMapTiledSize)
-
-	self._draw_stage_map() # 绘制游戏地图图层
 
 	# 修改坦克图层位置
 	$TankLayer.position = Vector2(war_offset_x, war_offset_y)
 	$TankLayer.set_size(_war_map_rect.size, false)
 
 	$AudioManager.play_game_start() # 播放游戏开始的音效
-	$StageCurtain/AnimationPlayer.play('stage_curtain_slide_up') # 打开游戏关卡幕布
+	$StageCurtain/AnimationPlayer.play(&'stage_curtain_slide_up') # 打开游戏关卡幕布
 
-	var create_enemy_timer = Timer.new()
-	create_enemy_timer.wait_time = 1.0
-	create_enemy_timer.one_shot = false
-	create_enemy_timer.connect('timeout', _create_enemy_tank_if_neccessary)
-	create_enemy_timer.autostart = true
-	self.add_child(create_enemy_timer)
+	self._draw_war_stage_map() # 绘制游戏地图图层
+	self._create_enenmy_by_timer() # 通过定时器创建敌方坦克
 
 ## 绑定事件通知
 func _bind_event_bus():
@@ -140,38 +144,56 @@ func _bind_event_bus():
 	GlobalEventBus.master_damaged.connect(_player_master_damaged)
 	GlobalEventBus.show_strong_prop.connect(_show_player_prop)
 
+## 游戏进度渲染方法
 @warning_ignore('unused_parameter')
 func _process(delta: float) -> void:
+	if Input.is_action_pressed(&'ui_pause_resume'):
+		if game_state == GAME_STATE_START:
+			game_state = GAME_STATE_PAUSE
+			set_all_tanks_move_state(false)
+		elif game_state == GAME_STATE_PAUSE:
+			game_state = GAME_STATE_START
+			set_all_tanks_move_state(true)
+	if game_state == GAME_STATE_PAUSE: return # 如果游戏是暂停状态，不处理以下逻辑
 	_handle_master_state(delta) # 处理玩家总部状态
-	$SideBarContainer/StageLevelFlag/NumberNode.set_number(stage_level + 1)
+	_handle_prop_timer_state(delta) # 处理定时器道具状态
+	$SideBarContainer/StageLevelFlag/NumberNode.set_number(stage_level)
 	$SideBarContainer/Player1/NumberNode.set_number(hero_tank_life if hero_tank_life >= 0 else 0)
 
-# 处理玩家总部状态
-func _handle_master_state(delta: float)->void:
-	if not _master_protected: return # 如果基地属于被保护状态，那么会执行下面的逻辑
+## 处理定时器道具状态
+func _handle_prop_timer_state(delta: float)->void:
+	if not _player_prop_timer_enable:
+		_player_prop_timer_time = 0.0
+		return
+	_player_prop_timer_time += delta # 累积计算时间
+	if _player_prop_timer_time > Constants.PLAYER_PROP_TIMER_LIMIT_TIMER:
+		_player_prop_timer_time = 0.0
+		_player_prop_timer_enable = false # 设置定时器道具不可用
+
+## 处理玩家总部状态
+func _handle_master_state(delta: float) -> void:
+	if not _master_protected:
+		_master_protected_time = 0.0
+		return # 如果基地属于被保护状态，那么会执行下面的逻辑
 	_master_protected_time += delta # 累积计算被保护的时长
 	if _master_protected_time >= Constants.PLAYER_MASTER_PROTECT_LIMIT_TIME:
 		_master_protected = false
-		_master_protected_time = 0
-		_tmp_map_tiled_change_time = 0
+		_master_protected_time = 0.0
+		_tmp_map_tiled_change_time = 0.0
 		_show_master_protect_nodes(MapTiledType.WALL)
 	elif _master_protected_time >= Constants.PLAYER_MASTER_PROTECT_LIMIT_TIME - 5:
 		_tmp_map_tiled_change_time += delta
-		if _tmp_map_tiled_change_time > 0.3:
-			if _tmp_map_tiled_type == MapTiledType.GRID:
-				_tmp_map_tiled_type = MapTiledType.WALL
-			else:
-				_tmp_map_tiled_type = MapTiledType.GRID
-			_tmp_map_tiled_change_time = 0.0
+		if _tmp_map_tiled_change_time <= 0.3: return # 每0.3秒切换一次地图地砖
+		if _tmp_map_tiled_type == MapTiledType.GRID:
+			_tmp_map_tiled_type = MapTiledType.WALL
+		else:
+			_tmp_map_tiled_type = MapTiledType.GRID
+		_tmp_map_tiled_change_time = 0.0
 		_show_master_protect_nodes(_tmp_map_tiled_type)
 
-func _draw() -> void:
-	draw_rect(_viewport_rect, Color(127, 127, 127, 255))
-	draw_rect(_war_map_rect, Color.BLACK)
-
 ## 绘制关卡地址
-func _draw_stage_map():
-	var stage_level_map: Array = StageLevel.WarMaps[stage_level]
+func _draw_war_stage_map():
+	var stage_level_map = StageLevel.get_stage_map(stage_level) # 关卡等级设置地图
 	for y in stage_level_map.size():
 		for x in stage_level_map[y].size():
 			var pos_x = x * Constants.WarMapTiledSize
@@ -224,10 +246,14 @@ func _show_master_protect_nodes(type: int):
 ## 敌人被消灭
 func _enemy_damaged(tank: TankNode):
 	print('敌人被消灭： ', tank)
-	if enemy_total_count == 0:
-		print('敌人已经被完全消灭！')
-		return # 敌人已经被完全消灭
 	enemy_total_count -= 1 # 敌人数量减少1
+	if enemy_total_count <= 0:
+		enemy_total_count = 0
+		print('敌人已经被完全消灭！')
+		GameData.stage_level = StageLevel.get_next_level(GameData.stage_level)
+		get_tree().change_scene_to_file('res://scenes/game_main_scene.tscn')
+		return # 敌人已经被完全消灭
+	print('当前还有敌方坦克数： %d' % enemy_total_count)
 
 ## 玩家被消灭
 func _player_damaged():
@@ -248,9 +274,17 @@ func _tank_get_prop(tank: TankNode, prop_type: int):
 	elif prop_type == PropNode.TYPE_MASTER: # 如果坦克敌机加固
 		_master_protected = true # 标记总部被保护
 		_master_protected_time = 0 # 标记总部被保护的时长
-		_tmp_map_tiled_change_time = 0
+		_tmp_map_tiled_change_time = 0 # 清空时间
 		_tmp_map_tiled_type = MapTiledType.GRID
 		_show_master_protect_nodes(MapTiledType.GRID) # 加固玩家基地
+	elif prop_type == PropNode.TYPE_BOMB: # 如果是炸弹道具
+		var children = $TankLayer.get_children()
+		for child in children:
+			if child is TankNode and \
+				child.role != TankRoleType.Hero:
+				child.bomb() # 坦克直接爆炸
+	elif prop_type == PropNode.TYPE_TIMER: # 如果是定时器道具
+		set_all_tanks_move_state(false) # 设置敌方坦克不可移动
 	$PropCreator.dismiss_player_prop() # 隐藏玩家道具
 
 ## 显示玩家道具
@@ -264,20 +298,31 @@ func _create_hero_tank():
 	if hero_tank_life < 0:
 		self._show_game_over_animation()
 		return # 玩家没有生命，直接结束游戏
-	hero_tank = TankCreator.create_hero_tank()
-	$TankLayer.add_child(hero_tank);
+	hero_tank = $TankCreator.create_hero_tank()
 	if game_state == GAME_STATE_OVER and hero_tank:
 		hero_tank.allow_move = false # 游戏结束，坦克无法移动
+	$TankLayer.add_child(hero_tank);
 
-## 通过定时器添加敌方坦克
+## 通过定时器创建敌方坦克
+func _create_enenmy_by_timer():
+	var create_enemy_timer = Timer.new()
+	create_enemy_timer.wait_time = 1.0
+	create_enemy_timer.one_shot = false
+	create_enemy_timer.name = "EnemyCreateTimer"
+	create_enemy_timer.connect('timeout', _create_enemy_tank_if_neccessary)
+	create_enemy_timer.autostart = true
+	self.add_child(create_enemy_timer)
+
+## 按需通过定时器添加敌方坦克
 func _create_enemy_tank_if_neccessary():
 	var total_enemy_count = 0 # 当前渲染界面中敌方坦克的数量
 	var tanks: Array[TankNode] = []
-	tanks.assign($TankLayer.get_children()\
+	tanks.assign($TankLayer.get_children() \
 		.filter(func(v): return v is TankNode and (v as TankNode).role != TankRoleType.Hero))
 	total_enemy_count = tanks.size() # 战场地方坦克的数量
 	# 当战场上的坦克总数小于等于0或者当战场上的坦克数等于战场上应该显示的坦克数时，就不应该创建新的坦克
-	if enemy_total_count <= 0 or total_enemy_count == enemy_war_count: return
+	if _enemy_born_count >= Constants.ENEMY_TOTAL_COUNT or \
+		total_enemy_count == enemy_war_count: return
 	var diff_count = abs(enemy_war_count - total_enemy_count)
 	var locations = [TankCreator.CREATE_LCOATION_CENTER, \
 		TankCreator.CREATE_LOCATION_LEFT, \
@@ -289,9 +334,11 @@ func _create_enemy_tank_if_neccessary():
 		Rect2(Constants.WarMapSize - Constants.WarMapTiledBigSize, 0, \
 			Constants.WarMapTiledBigSize, Constants.WarMapTiledBigSize),
 	]
-	for i in range(0, diff_count):
+	for i in range(diff_count):
+		if _enemy_born_count > Constants.ENEMY_TOTAL_COUNT:
+			return # 防止敌方坦克总数超限
 		var target_location: int = -100000
-		for index in range(0, locationRects.size()):
+		for index in range(locationRects.size()):
 			var rect = locationRects[index]
 			var location = locations[index]
 			if tanks.is_empty() or \
@@ -307,10 +354,11 @@ func _create_enemy_tank_if_neccessary():
 			type = TankRoleType.Enemy2
 		else:
 			type = TankRoleType.Enemy3
-		var tank = TankCreator.create_enemy_tank(type, target_location)
-		if enemy_total_count % 3 == 0 and \
+		var tank = $TankCreator.create_enemy_tank(type, target_location)
+		if tanks.size() % 3 == 0 and \
 			type != TankRoleType.Enemy3:
 			tank.red_tank_count = randi() % 2 + 1 # 标记为红坦克
+		_enemy_born_count += 1 # 统计坦克出生数量
 		$TankLayer.add_child(tank); # 添加创建的坦克到新节点中
 		tanks.append(tank) # 需要记录这个新添加的
 		remove_enemy_counter_container_last_child() # 移除敌人计数器中最后一个child
@@ -330,6 +378,13 @@ func remove_enemy_counter_container_last_child():
 	_enemy_counter_container.remove_child(last_child)
 	last_child.queue_free() # 消除最后一个child
 	_enemy_counter_container.queue_redraw() # 重新绘制界面
+
+## 设置所有坦克的运行状态
+func set_all_tanks_move_state(allow_move: bool):
+	var children = $TankLayer.get_children()
+	for child in children:
+		if child is TankNode:
+			child.allow_move = allow_move
 
 ## 显示游戏结束动画
 func _show_game_over_animation():

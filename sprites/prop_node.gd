@@ -71,6 +71,9 @@ func _exit_tree() -> void:
 
 ## 显示分数然后注销
 func show_score_then_dispose():
+	if blink_tween and blink_tween.is_running():
+		_stop_blink()
+		self.set_deferred(&'mudulate', Color(1, 1, 1, 1))
 	$StaticBody2D/CollisionShape2D.set_deferred('disabled', true)
 	self.texture = load('res://assets/images/score_%d.png' % [prop_score])
 	await get_tree().create_timer(1.2).timeout

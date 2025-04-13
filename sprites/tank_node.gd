@@ -77,7 +77,7 @@ func _initialize():
 			hits_of_received = 3 # 如果是Enemy3，抗击打能力设置为3
 		_add_auto_move_timer() # 添加自动移动的定时器逻辑
 		self.collision_layer &= ~CollisionLayer.HeroTank
-		self.collision_mask &= ~CollisionLayer.EnemyTank
+		# self.collision_mask &= ~CollisionLayer.EnemyTank
 		self.collision_mask &= ~CollisionLayer.EnemyBullet
 		if red_tank_count > 0: # 如果是红色坦克
 			self._start_blink() # 是红坦克，就开始闪烁
@@ -201,6 +201,7 @@ func _remove_auto_move_timer():
 
 ## 通过定时器的智能移动
 func _change_direction_by_timer():
+	if not allow_move: return # 如果不允许移动，则也无法转向
 	var direction = directions.keys()[randi() % 4]
 	self.change_direction(direction) #修改新的移动方向
 
@@ -256,8 +257,16 @@ func _append_protected_effect():
 	$ProtectedAnimation.visible = true
 	$ProtectedAnimation.play('Protected')
 
+## 直接爆炸
+func bomb():
+	self._show_bomb_effect()
+
 ## 显示爆炸特效，摧毁坦克节点
 func _show_bomb_effect():
+	if _red_tank_blink_tween and \
+		_red_tank_blink_tween.is_running():
+		_red_tank_blink_tween.stop()
+		$TankSprite.set_deferred(&'modulate', Color(1, 1, 1, 1))
 	current_state = TankState.DEAD
 	if role != TankRoleType.Hero:
 		_remove_auto_move_timer() # 需要删除自动移动的逻辑

@@ -12,7 +12,12 @@ var _tank_prop_prefab = preload('res://sprites/prop_node.tscn')
 ## 显示玩家道具
 func show_player_prop(parentNode: Node):
 	self.dismiss_player_prop(true)
-	var prop_type = [PropNode.TYPE_MASTER, PropNode.TYPE_TANK, PropNode.TYPE_HAT][randi() % 3]
+	var prop_type = [\
+		PropNode.TYPE_MASTER, \
+		PropNode.TYPE_TANK, \
+		PropNode.TYPE_HAT, \
+		PropNode.TYPE_BOMB, \
+		PropNode.TYPE_TIMER][randi() % 3]
 	_tank_strong_prop = _tank_prop_prefab.instantiate() as PropNode
 	_tank_strong_prop.prop_type = prop_type
 	_tank_strong_prop.position = Vector2(

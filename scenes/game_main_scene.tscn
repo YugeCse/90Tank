@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://831xnm84ycoi"]
+[gd_scene load_steps=14 format=3 uid="uid://831xnm84ycoi"]
 
 [ext_resource type="Script" uid="uid://ddbr8j0fm3lhu" path="res://scenes/game_main_scene.gd" id="1_cqh8l"]
 [ext_resource type="Script" uid="uid://b5su4eug3qic6" path="res://scripts/audio_manager.gd" id="2_jjcd7"]
@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://7vx6aitfvb6q" path="res://assets/images/stage_flag.png" id="7_18dyl"]
 [ext_resource type="Texture2D" uid="uid://cfctqvp6wndca" path="res://assets/images/game_over.png" id="8_gd5mj"]
 [ext_resource type="Script" uid="uid://buf76tqkrru06" path="res://scripts/prop_creator.gd" id="9_18dyl"]
+[ext_resource type="Script" uid="uid://82q6tostn0rw" path="res://scripts/tank_creator.gd" id="10_mbwak"]
 
 [sub_resource type="Animation" id="Animation_6mcyx"]
 length = 0.001
@@ -160,12 +161,15 @@ offset_left = 806.0
 offset_top = 176.0
 offset_right = 852.0
 offset_bottom = 592.0
-theme_override_constants/separation = 40
 
 [node name="EnemyCounterContainer" type="GridContainer" parent="SideBarContainer"]
-custom_minimum_size = Vector2(28, 140)
+custom_minimum_size = Vector2(28, 180)
 layout_mode = 2
 columns = 2
+
+[node name="Spacer" type="Control" parent="SideBarContainer"]
+layout_mode = 2
+size_flags_vertical = 3
 
 [node name="Player1" type="Control" parent="SideBarContainer"]
 custom_minimum_size = Vector2(46, 46)
@@ -186,6 +190,10 @@ offset_bottom = 38.0
 alignment = 1
 script = ExtResource("4_b03q8")
 metadata/_custom_type_script = "uid://dmog2jrkku6tg"
+
+[node name="Spacer2" type="Control" parent="SideBarContainer"]
+layout_mode = 2
+size_flags_vertical = 3
 
 [node name="Player2" type="Control" parent="SideBarContainer"]
 custom_minimum_size = Vector2(46, 46)
@@ -208,7 +216,12 @@ alignment = 1
 script = ExtResource("4_b03q8")
 metadata/_custom_type_script = "uid://dmog2jrkku6tg"
 
+[node name="Spacer3" type="Control" parent="SideBarContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
 [node name="StageLevelFlag" type="Control" parent="SideBarContainer"]
+custom_minimum_size = Vector2(46, 46)
 layout_mode = 2
 
 [node name="TextureRect" type="TextureRect" parent="SideBarContainer/StageLevelFlag"]
@@ -226,6 +239,10 @@ offset_bottom = 38.0
 alignment = 1
 script = ExtResource("4_b03q8")
 metadata/_custom_type_script = "uid://dmog2jrkku6tg"
+
+[node name="Spacer4" type="Control" parent="SideBarContainer"]
+layout_mode = 2
+size_flags_vertical = 3
 
 [node name="StageCurtain" type="Control" parent="."]
 clip_contents = true
@@ -321,3 +338,7 @@ texture = ExtResource("8_gd5mj")
 [node name="PropCreator" type="Node" parent="."]
 script = ExtResource("9_18dyl")
 metadata/_custom_type_script = "uid://buf76tqkrru06"
+
+[node name="TankCreator" type="Node" parent="."]
+script = ExtResource("10_mbwak")
+metadata/_custom_type_script = "uid://82q6tostn0rw"
