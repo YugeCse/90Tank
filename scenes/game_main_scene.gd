@@ -95,7 +95,8 @@ func _init_layout():
 	_war_map_rect = Rect2(war_offset_x, war_offset_y, \
 		Constants.WarMapSize, Constants.WarMapSize)
 	stage_level = GameData.stage_level # 获取全局的关卡等级
-	$Background.set_size(get_window().size)
+	hero_tank_life = GameData.player_life # 获取全局的玩家生命数
+	$Background.set_size(get_window().size) # 设置背景的窗口大小
 	# 调整侧边栏的位置
 	$SideBarContainer.position = Vector2(_war_map_rect.end.x + 2.0, war_offset_y)
 	# 设置侧边栏敌人计数
@@ -145,8 +146,12 @@ func _bind_event_bus():
 	GlobalEventBus.show_strong_prop.connect(_show_player_prop)
 
 ## 游戏进度渲染方法
-@warning_ignore('unused_parameter')
 func _process(delta: float) -> void:
+	if game_state == GAME_STATE_OVER and \
+		Input.is_key_pressed(KEY_ENTER):
+			GameData.resetData() # 游戏数据重置
+			get_tree().reload_current_scene() # 重新加载当前的游戏场景
+			return
 	if Input.is_action_pressed(&'ui_pause_resume'):
 		if game_state == GAME_STATE_START:
 			game_state = GAME_STATE_PAUSE
