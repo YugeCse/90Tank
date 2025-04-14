@@ -33,7 +33,7 @@ func _add_number(num: int):
 	var num_sprite = TextureRect.new()
 	num_sprite.size = Vector2(14, 14)
 	num_sprite.texture = load(\
-		number_atlas_path\
+		number_atlas_path \
 		.format({'num': num}))
 	self.add_child(num_sprite)
 
@@ -41,4 +41,4 @@ func _add_number(num: int):
 func _clear_children():
 	var children = get_children()
 	for child in children:
-		child.free()
+		child.queue_free()
