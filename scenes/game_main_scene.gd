@@ -255,8 +255,8 @@ func _enemy_damaged(tank: TankNode):
 	if enemy_total_count <= 0:
 		enemy_total_count = 0
 		print('敌人已经被完全消灭！')
-		GameData.stage_level = StageLevel.get_next_level(GameData.stage_level)
-		get_tree().change_scene_to_file('res://scenes/game_main_scene.tscn')
+		await get_tree().create_timer(5.0).timeout # 延迟5秒再执行转场
+		_enter_next_stage_scene() # 进入下一个关卡场景
 		return # 敌人已经被完全消灭
 	print('当前还有敌方坦克数： %d' % enemy_total_count)
 
@@ -388,7 +388,9 @@ func remove_enemy_counter_container_last_child():
 func set_all_tanks_move_state(allow_move: bool):
 	var children = $TankLayer.get_children()
 	for child in children:
-		if child is TankNode:
+		if child and \
+			child is TankNode and \
+			(child as TankNode).role != TankRoleType.Hero:
 			child.allow_move = allow_move
 
 ## 显示游戏结束动画
@@ -401,3 +403,8 @@ func _show_game_over_animation():
 	tween.tween_property($GameOverContainer/GameOverPic, "position:y", \
 		Constants.WarMapSize / 2.0 - Constants.WarMapTiledSize, 1.2)
 	if hero_tank: hero_tank.allow_move = false # 游戏结束，坦克无法移动
+
+## 进入下一个关卡场景
+func _enter_next_stage_scene():
+	GameData.stage_level = StageLevel.get_next_level(GameData.stage_level)
+	get_tree().change_scene_to_file('res://scenes/game_main_scene.tscn')

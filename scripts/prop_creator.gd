@@ -17,7 +17,8 @@ func show_player_prop(parentNode: Node):
 		PropNode.TYPE_TANK, \
 		PropNode.TYPE_HAT, \
 		PropNode.TYPE_BOMB, \
-		PropNode.TYPE_TIMER][randi() % 3]
+		PropNode.TYPE_TIMER, \
+		PropNode.TYPE_STAR][randi() % 6]
 	_tank_strong_prop = _tank_prop_prefab.instantiate() as PropNode
 	_tank_strong_prop.prop_type = prop_type
 	_tank_strong_prop.position = Vector2(

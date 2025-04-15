@@ -10,6 +10,9 @@ var role: int = TankRoleType.Hero
 @export
 var speed: float = 160
 
+## 射击限制时间
+var shoot_limit_time: float = 0.5
+
 ## 坦克抗击数
 @export
 var hits_of_received: int = 1
@@ -75,6 +78,11 @@ func _initialize():
 	if role != TankRoleType.Hero: # 如果是敌方坦克
 		if role == TankRoleType.Enemy3: # 如果是第三类敌机坦克
 			hits_of_received = 3 # 如果是Enemy3，抗击打能力设置为3
+			shoot_limit_time = 0.7
+		elif role == TankRoleType.Enemy2:
+			shoot_limit_time = 0.5
+		elif role == TankRoleType.Enemy1:
+			shoot_limit_time = 0.6
 		_add_auto_move_timer() # 添加自动移动的定时器逻辑
 		self.collision_layer &= ~CollisionLayer.HeroTank
 		# self.collision_mask &= ~CollisionLayer.EnemyTank
@@ -110,10 +118,10 @@ func _process(delta: float) -> void:
 		if current_state != TankState.ALIVE and\
 			current_state != TankState.STRONG:
 			return # 非正常状态，无法移动，无法发射子弹
-		if _shoot_time < 1.0:
+		if _shoot_time < shoot_limit_time:
 			_shoot_time += delta # 每次时间累加
 		else:
-			shoot() # 发送子弹
+			self.shoot() # 发送子弹
 			_shoot_time = 0.0 # 还原状态值
 		self._safe_move(delta, current_direction)
 	# 限制运动范围，只能在世界范围内
@@ -135,10 +143,10 @@ func handle_input(delta: float):
 			velocity = Vector2.ZERO
 	## 处理发射子弹
 	if Input.is_action_pressed("ui_shoot"):
-		if _shoot_time < 0.3:
+		if _shoot_time < shoot_limit_time:
 			_shoot_time += delta #计算发射时间
 			return
-		_shoot_time = 0.0
+		_shoot_time = 0.0 # 射击时间计时归零
 		self.shoot() #发射子弹
 
 ## 设置坦克方向
@@ -175,6 +183,12 @@ func _handle_collision_event(collider: Object):
 				self._append_protected_effect()
 			elif prop_type == PropNode.TYPE_STAR: # 如果是五角星，拾取五角星
 				self.star_count += 1 # 星星数量增加1
+				if self.star_count >= 3:
+					shoot_limit_time = 0.25 # 限制事件修改为0.5
+				elif self.star_count >= 2:
+					shoot_limit_time = 0.3 # 限制事件修改为0.6
+				elif self.star_count >= 1:
+					shoot_limit_time = 0.35 # 限制事件修改为0.7
 			print('碰撞对象是：', typeof(collider_obj))
 			GlobalEventBus.apply_tank_get_prop(self, prop_type) # 发送获得道具的通知
 
